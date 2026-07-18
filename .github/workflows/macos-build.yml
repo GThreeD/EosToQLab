@@ -1,0 +1,31 @@
+name: macOS build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test-and-publish:
+    runs-on: macos-15
+    strategy:
+      matrix:
+        architecture: [arm64, x64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+      - name: Restore
+        run: dotnet restore EosToQLab.sln
+      - name: Run self-tests
+        run: dotnet run --project tests/EosToQLab.SelfTests/EosToQLab.SelfTests.csproj -c Release
+      - name: Publish
+        run: ./packaging/publish-macos.sh "${{ matrix.architecture }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EosToQLab-${{ matrix.architecture }}
+          path: dist/EosToQLab-${{ matrix.architecture }}.zip

@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/EosToQLab.Core/EosToQLab.Core.csproj" />
+  <Project Path="src/EosToQLab.Infrastructure/EosToQLab.Infrastructure.csproj" />
+  <Project Path="src\EosToQLab.Application\EosToQLab.Application.csproj" />
+  <Project Path="tests/EosToQLab.SelfTests/EosToQLab.SelfTests.csproj" />
+</Solution>

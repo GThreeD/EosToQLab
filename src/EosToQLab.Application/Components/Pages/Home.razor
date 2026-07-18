@@ -1,0 +1,389 @@
+@page "/"
+
+@inject IEosCueImporterFactory ImporterFactory
+@inject IQLabService QLabService
+
+<PageTitle>EosToQLab</PageTitle>
+
+<section class="hero">
+    <div>
+        <div class="eyebrow">Import workflow</div>
+        <h1>Build a protected QLab cue list from EOS</h1>
+        <p>Drop an EOS CSV or ESF3D file, review the parsed cues, and import them into a workspace that is already open in QLab 5.</p>
+    </div>
+    <div class="status-pill @(_busy ? "working" : "ready")">
+        @(_busy ? "Working…" : "Ready")
+    </div>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert error">
+        <strong>@_errorCode</strong>
+        <span>@_errorMessage</span>
+    </div>
+}
+@if (!string.IsNullOrWhiteSpace(_successMessage))
+{
+    <div class="alert success">@_successMessage</div>
+}
+
+<div class="workflow-grid">
+    <section class="card source-card">
+        <div class="step-heading">
+            <span class="step-number">1</span>
+            <div>
+                <h2>EOS source</h2>
+                <p>CSV and ESF3D use separate import strategies behind the same interface.</p>
+            </div>
+        </div>
+
+        <label class="drop-zone @(_busy ? "disabled" : string.Empty)">
+            <InputFile OnChange="LoadSourceAsync" accept=".csv,.esf3d" disabled="@_busy" />
+            <span class="drop-icon">⇩</span>
+            <strong>Drop a file here or click to choose</strong>
+            <span>Accepted: .csv, .esf3d</span>
+        </label>
+
+        @if (_source is not null)
+        {
+            <div class="source-summary">
+                <div>
+                    <span class="label">Source</span>
+                    <strong>@_source.SourceDescription</strong>
+                </div>
+                <div>
+                    <span class="label">Strategy</span>
+                    <strong>@_source.SourceKind</strong>
+                </div>
+                <div>
+                    <span class="label">Cues</span>
+                    <strong>@_source.Cues.Count</strong>
+                </div>
+            </div>
+        }
+    </section>
+
+    <section class="card target-card">
+        <div class="step-heading">
+            <span class="step-number">2</span>
+            <div>
+                <h2>Open QLab workspace</h2>
+                <p>The app never creates or opens a QLab document.</p>
+            </div>
+        </div>
+
+        <button class="secondary" @onclick="RefreshWorkspacesAsync" disabled="@_busy">Refresh open workspaces</button>
+
+        <label class="field">
+            <span>Workspace</span>
+            <select @bind="SelectedWorkspaceId" disabled="@(_busy || _workspaces.Count == 0)">
+                <option value="">Select an open workspace</option>
+                @foreach (var workspace in _workspaces)
+                {
+                    <option value="@workspace.Id">@workspace.Name</option>
+                }
+            </select>
+        </label>
+
+        <label class="field">
+            <span>OSC passcode (optional)</span>
+            <input type="password" @bind="_passcode" disabled="@_busy" autocomplete="off" />
+        </label>
+    </section>
+</div>
+
+<section class="card options-card">
+    <div class="step-heading">
+        <span class="step-number">3</span>
+        <div>
+            <h2>Import options</h2>
+            <p>A temporary cue list is populated first. Existing lists remain untouched unless replacement is explicitly confirmed.</p>
+        </div>
+    </div>
+
+    <div class="form-grid">
+        <label class="field">
+            <span>New cue list name</span>
+            <input @bind="CueListName" disabled="@_busy" />
+        </label>
+        <label class="field">
+            <span>Cue name prefix</span>
+            <input @bind="_cueNamePrefix" disabled="@_busy" />
+        </label>
+        <label class="field">
+            <span>QLab network patch name</span>
+            <input @bind="_networkPatchName" disabled="@_busy" />
+        </label>
+        <label class="field">
+            <span>Scene text</span>
+            <select @bind="_sceneMode" disabled="@_busy">
+                <option value="@SceneTextImportMode.Ignore">Ignore</option>
+                <option value="@SceneTextImportMode.NotesOnly">Cue notes only</option>
+                <option value="@SceneTextImportMode.MemoCueOnly">Memo cues only</option>
+                <option value="@SceneTextImportMode.MemoCueAndNotes">Memo cues and notes</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="checks">
+        <label><input type="checkbox" @bind="_skipCueAfterFollowOrHang" disabled="@_busy" /> Skip the cue immediately following an EOS follow/hang cue</label>
+        <label><input type="checkbox" @bind="_saveWorkspace" disabled="@_busy" /> Save the QLab workspace after a successful import</label>
+    </div>
+
+    @if (_conflictDetected)
+    {
+        <div class="conflict-box">
+            <strong>A cue list named “@_cueListName” already exists.</strong>
+            <p>Replacement deletes only that matching list after the new temporary list has been built successfully.</p>
+            <label>
+                <input type="checkbox" @bind="_replacementConsent" disabled="@_busy" />
+                I explicitly approve replacing the existing cue list.
+            </label>
+        </div>
+    }
+
+    <button class="primary" @onclick="ImportToQLabAsync" disabled="@(!CanImport)">
+        Import into QLab
+    </button>
+</section>
+
+@if (_source is not null)
+{
+    <section class="card preview-card">
+        <div class="preview-header">
+            <div>
+                <h2>Cue preview</h2>
+                <p>The preview shows the normalized domain model used by both import strategies.</p>
+            </div>
+            <span>@_source.Cues.Count total</span>
+        </div>
+
+        @if (_source.Diagnostics.Count > 0)
+        {
+            <div class="diagnostics">
+                @foreach (var diagnostic in _source.Diagnostics)
+                {
+                    <div class="diagnostic">
+                        <code>@diagnostic.Code</code>
+                        <span>@diagnostic.Message</span>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>EOS cue</th>
+                        <th>Label</th>
+                        <th>Scene</th>
+                        <th>Follow/Hang</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cue in _source.Cues.Take(500))
+                    {
+                        <tr>
+                            <td>@(cue.SourceOrder + 1)</td>
+                            <td><strong>@cue.DisplayCueNumber</strong></td>
+                            <td>@(cue.Label ?? "—")</td>
+                            <td>@(cue.SceneText ?? "—")</td>
+                            <td>@(cue.Follow ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (_source.Cues.Count > 500)
+        {
+            <p class="table-note">Only the first 500 cues are shown. All cues will be imported.</p>
+        }
+    </section>
+}
+
+@code {
+    private const long MaximumSourceSize = 1024L * 1024L * 1024L;
+    private EosImportResult? _source;
+    private IReadOnlyList<QLabWorkspace> _workspaces = [];
+    private string _selectedWorkspaceId = string.Empty;
+    private string _passcode = string.Empty;
+    private string _cueListName = $"EOS Import {DateTime.Now:yyyy-MM-dd HHmm}";
+    private string _cueNamePrefix = "EOS";
+    private string _networkPatchName = "Patch 1";
+    private SceneTextImportMode _sceneMode = SceneTextImportMode.MemoCueAndNotes;
+    private bool _skipCueAfterFollowOrHang = true;
+    private bool _saveWorkspace = true;
+    private bool _conflictDetected;
+    private bool _replacementConsent;
+    private bool _busy;
+    private string? _errorCode;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    private string SelectedWorkspaceId
+    {
+        get => _selectedWorkspaceId;
+        set
+        {
+            if (string.Equals(_selectedWorkspaceId, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _selectedWorkspaceId = value;
+            ResetConflictState();
+        }
+    }
+
+    private string CueListName
+    {
+        get => _cueListName;
+        set
+        {
+            if (string.Equals(_cueListName, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _cueListName = value;
+            ResetConflictState();
+        }
+    }
+
+    private bool CanImport => !_busy
+        && _source is { Cues.Count: > 0 }
+        && !string.IsNullOrWhiteSpace(_selectedWorkspaceId)
+        && !string.IsNullOrWhiteSpace(_cueListName)
+        && !string.IsNullOrWhiteSpace(_networkPatchName)
+        && (!_conflictDetected || _replacementConsent);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshWorkspacesAsync();
+    }
+
+    private async Task LoadSourceAsync(InputFileChangeEventArgs eventArgs)
+    {
+        await RunGuardedAsync(async () =>
+        {
+            _source = null;
+            _successMessage = null;
+            _conflictDetected = false;
+            _replacementConsent = false;
+
+            var file = eventArgs.File;
+            await using var browserStream = file.OpenReadStream(MaximumSourceSize);
+            using var content = new MemoryStream(file.Size > int.MaxValue ? 0 : (int)file.Size);
+            await browserStream.CopyToAsync(content);
+            content.Position = 0;
+
+            var importer = ImporterFactory.CreateFor(file.Name);
+            _source = await importer.ImportAsync(new EosImportRequest(file.Name, content));
+        });
+    }
+
+    private async Task RefreshWorkspacesAsync()
+    {
+        await RunGuardedAsync(async () =>
+        {
+            _workspaces = await QLabService.GetOpenWorkspacesAsync();
+            if (_workspaces.Count == 1)
+            {
+                SelectedWorkspaceId = _workspaces[0].Id;
+            }
+            else if (_workspaces.All(workspace => workspace.Id != _selectedWorkspaceId))
+            {
+                SelectedWorkspaceId = string.Empty;
+            }
+        });
+    }
+
+    private async Task ImportToQLabAsync()
+    {
+        if (_source is null || !CanImport)
+        {
+            return;
+        }
+
+        await RunGuardedAsync(async () =>
+        {
+            var cueLists = await QLabService.GetCueListsAsync(
+                _selectedWorkspaceId,
+                NullIfWhiteSpace(_passcode));
+            var hasConflict = cueLists.Any(list =>
+                string.Equals(list.Name, _cueListName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+            if (hasConflict && !_replacementConsent)
+            {
+                _conflictDetected = true;
+                _errorCode = "QLAB_CUE_LIST_CONFLICT";
+                _errorMessage = "Explicit replacement consent is required before the existing cue list can be replaced.";
+                return;
+            }
+
+            var result = await QLabService.ImportAsync(
+                _source.Cues,
+                new QLabImportOptions
+                {
+                    WorkspaceId = _selectedWorkspaceId,
+                    Passcode = NullIfWhiteSpace(_passcode),
+                    CueListName = _cueListName.Trim(),
+                    CueNamePrefix = _cueNamePrefix.Trim(),
+                    NetworkPatchName = _networkPatchName.Trim(),
+                    SceneTextMode = _sceneMode,
+                    SkipCueAfterFollowOrHang = _skipCueAfterFollowOrHang,
+                    ConflictPolicy = hasConflict
+                        ? CueListConflictPolicy.ReplaceWithExplicitConsent
+                        : CueListConflictPolicy.Fail,
+                    ExplicitReplacementConsent = hasConflict && _replacementConsent,
+                    SaveWorkspaceAfterImport = _saveWorkspace
+                });
+
+            _conflictDetected = false;
+            _replacementConsent = false;
+            _successMessage = $"Imported {result.NetworkCueCount} network cues and {result.MemoCueCount} memo cues into '{_cueListName}'.";
+        });
+    }
+
+    private async Task RunGuardedAsync(Func<Task> operation)
+    {
+        _busy = true;
+        _errorCode = null;
+        _errorMessage = null;
+        try
+        {
+            await operation();
+        }
+        catch (EosToQLabException exception)
+        {
+            _errorCode = exception.Code;
+            _errorMessage = exception.Message;
+            if (exception is QLabCueListConflictException)
+            {
+                _conflictDetected = true;
+            }
+        }
+        catch (Exception exception)
+        {
+            var wrapped = new UnexpectedApplicationException(exception);
+            _errorCode = wrapped.Code;
+            _errorMessage = wrapped.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void ResetConflictState()
+    {
+        _conflictDetected = false;
+        _replacementConsent = false;
+    }
+
+    private static string? NullIfWhiteSpace(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
