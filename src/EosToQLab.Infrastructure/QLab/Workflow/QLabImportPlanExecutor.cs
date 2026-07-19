@@ -113,7 +113,6 @@ public sealed class QLabImportPlanExecutor
                 cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(request.DesiredCueNumber))
-            {
                 // QLab may automatically number newly created cues. Clear that value first,
                 // so a rejected EOS number never leaves an incremented fallback number behind.
                 await session.SetCuePropertyAsync(
@@ -121,7 +120,6 @@ public sealed class QLabImportPlanExecutor
                     QLabCueProperty.Number,
                     string.Empty,
                     cancellationToken);
-            }
 
             foreach (var assignment in request.CueProperties)
                 await session.SetCuePropertyAsync(
@@ -136,22 +134,16 @@ public sealed class QLabImportPlanExecutor
                     .OrderBy(assignment => assignment.Index)
                     .ToArray();
                 for (var index = 0; index < orderedParameters.Length; index++)
-                {
                     if (orderedParameters[index].Index != index)
-                    {
                         throw new InvalidOperationException(
                             "QLab network parameter indices must be contiguous and start at zero.");
-                    }
-                }
 
                 foreach (var assignment in orderedParameters)
-                {
                     await session.SetNetworkParameterAsync(
                         cueId,
                         assignment.Index,
                         assignment.Value,
                         cancellationToken);
-                }
             }
 
             if (verifyNetworkPatch && request.ExpectedNetworkPatch is not null)

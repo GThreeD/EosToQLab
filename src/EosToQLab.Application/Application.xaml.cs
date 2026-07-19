@@ -9,7 +9,7 @@ public partial class Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new(new MainPage())
+        return new Window(new MainPage())
         {
             Title = "EosToQLab",
             Width = 1180,

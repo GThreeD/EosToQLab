@@ -22,7 +22,7 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
         {
             var isFollowedCue = triggeredByPreviousCue.GetValueOrDefault(cue.ListNumber);
             var excludeFollowedCue = isFollowedCue
-                && options.FollowedCueMode == FollowedCueImportMode.Exclude;
+                                     && options.FollowedCueMode == FollowedCueImportMode.Exclude;
 
             if (cue.ImportEnabled && excludeFollowedCue)
             {
@@ -31,12 +31,10 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
             else if (cue.ImportEnabled)
             {
                 var importDisarmed = isFollowedCue
-                    && options.FollowedCueMode == FollowedCueImportMode.ImportDisarmed;
+                                     && options.FollowedCueMode == FollowedCueImportMode.ImportDisarmed;
 
                 if (importDisarmed)
-                {
                     diagnostics?.Add(new CueImportedDisarmedAfterFollowOrHangWarning(cue.DisplayCueNumber));
-                }
 
                 AddSceneMemoIfNeeded(items, cue, options, ref previousScene);
                 items.Add(new QLabNetworkCuePlan(
@@ -45,7 +43,7 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
                     cue.CueNumber,
                     cue.CueNumber,
                     NullIfWhiteSpace(cue.CueNotes),
-                    Armed: !importDisarmed));
+                    !importDisarmed));
             }
 
             // Follow/hang state is based on the complete EOS sequence, including cues manually

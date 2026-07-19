@@ -18,14 +18,6 @@ public sealed class QLabOscSession : IQLabOscSession
 
     public QLabWorkspace Workspace { get; }
 
-    internal async Task EnableAlwaysReplyAsync(CancellationToken cancellationToken)
-    {
-        using var reply = await SendAsync(
-            QLabProtocol.Addresses.AlwaysReply,
-            cancellationToken,
-            1);
-    }
-
     public async Task<IReadOnlyList<QLabCueList>> GetCueListsAsync(
         CancellationToken cancellationToken = default)
     {
@@ -209,6 +201,14 @@ public sealed class QLabOscSession : IQLabOscSession
     public ValueTask DisposeAsync()
     {
         return _transport.DisposeAsync();
+    }
+
+    internal async Task EnableAlwaysReplyAsync(CancellationToken cancellationToken)
+    {
+        using var reply = await SendAsync(
+            QLabProtocol.Addresses.AlwaysReply,
+            cancellationToken,
+            1);
     }
 
     private Task<string?> QueryWorkspacePropertyAsync(

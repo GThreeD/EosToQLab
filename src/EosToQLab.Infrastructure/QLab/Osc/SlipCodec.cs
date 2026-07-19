@@ -31,5 +31,4 @@ internal static class SlipCodec
         stream.WriteByte(End);
         return stream.ToArray();
     }
-
 }

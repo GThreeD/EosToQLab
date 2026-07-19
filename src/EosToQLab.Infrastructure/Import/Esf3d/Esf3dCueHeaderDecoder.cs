@@ -52,17 +52,12 @@ internal static class Esf3dCueHeaderDecoder
         }
 
         int? cueNotesOffset = IsTextValue(data, offset, recordEnd) ? offset : null;
-        
+
         var continuationSearchStart = offset;
         if (cueNotesOffset is not null
             && TryReadText(data, offset, recordEnd, out _, out var cueNotesEnd))
-        {
             continuationSearchStart = cueNotesEnd;
-        }
-        else if (offset < recordEnd && data[offset] is 0x00 or 0x04)
-        {
-            continuationSearchStart = offset + 1;
-        }
+        else if (offset < recordEnd && data[offset] is 0x00 or 0x04) continuationSearchStart = offset + 1;
 
         // Current EOS show files store follow/hang timing in a later continuation object,
         // not in the legacy metadata slot used by older/synthetic fixtures.
@@ -72,10 +67,8 @@ internal static class Esf3dCueHeaderDecoder
                 continuationSearchStart,
                 recordEnd,
                 out var continuationFollow))
-        {
             follow = continuationFollow;
-        }
-        
+
         return new Esf3dCueHeaderDecodeResult(
             true,
             follow,
@@ -98,10 +91,7 @@ internal static class Esf3dCueHeaderDecoder
         // appear to duplicate mode state, so either boolean being true is treated as Hang.
         for (var candidate = start; candidate < end; candidate++)
         {
-            if (data[candidate] != 0x02)
-            {
-                continue;
-            }
+            if (data[candidate] != 0x02) continue;
 
             var offset = candidate + 1;
             if (!TryReadBoolean(data, ref offset, end, out var firstModeFlag)
@@ -115,16 +105,12 @@ internal static class Esf3dCueHeaderDecoder
                 || milliseconds > 86_400_000
                 || offset >= end
                 || data[offset] != 0x04)
-            {
                 continue;
-            }
 
             offset++;
             if (!TryReadUnsigned(data, offset, end, out var trailerMarker, out _)
                 || trailerMarker != 1)
-            {
                 continue;
-            }
 
             value = FormatFollowOrHang(firstModeFlag || secondModeFlag, milliseconds);
             return true;
@@ -140,10 +126,7 @@ internal static class Esf3dCueHeaderDecoder
         out bool value)
     {
         value = false;
-        if (offset + 1 >= end || data[offset] != 0x01)
-        {
-            return false;
-        }
+        if (offset + 1 >= end || data[offset] != 0x01) return false;
 
         value = data[offset + 1] != 0;
         offset += 2;
@@ -350,7 +333,7 @@ internal static class Esf3dCueHeaderDecoder
         var prefix = isHang ? "H" : "F";
         if (milliseconds is null) return prefix;
 
-        var seconds = (decimal)milliseconds.Value / 1_000m;
+        var seconds = milliseconds.Value / 1_000m;
         return prefix + seconds.ToString("0.###", CultureInfo.InvariantCulture);
     }
 }

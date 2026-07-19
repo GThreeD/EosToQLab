@@ -11,8 +11,8 @@ internal sealed class QLabTcpOscTransport(
     private readonly TcpClient _client = new();
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly TimeSpan _timeout = timeout ?? TimeSpan.FromSeconds(10);
-    private NetworkStream? _stream;
     private SlipStreamReader? _reader;
+    private NetworkStream? _stream;
 
     public async Task ConnectAsync(CancellationToken cancellationToken)
     {

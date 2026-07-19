@@ -24,48 +24,6 @@ public enum QLabWorkspaceProperty
 
 internal static class QLabProtocol
 {
-    internal static class Addresses
-    {
-        internal const string Workspaces = "/workspaces";
-        internal const string AlwaysReply = "/alwaysReply";
-        internal const string ReplyPrefix = "/reply";
-        internal const string Disconnect = "/disconnect";
-
-        internal static string Workspace(string workspaceId, string command)
-        {
-            return $"/workspace/{workspaceId}/{command}";
-        }
-
-        internal static string Cue(string workspaceId, string cueId, string property)
-        {
-            return $"/workspace/{workspaceId}/cue_id/{cueId}/{property}";
-        }
-    }
-
-    internal static class Reply
-    {
-        internal const string StatusField = "status";
-        internal const string DataField = "data";
-        internal const string OkStatus = "ok";
-        internal const string DeniedStatus = "denied";
-        internal const string BadPassStatus = "badpass";
-    }
-
-    internal static class WorkspaceCommands
-    {
-        internal const string Connect = "connect";
-        internal const string CueListsShallow = "cueLists/shallow";
-        internal const string NewCue = "new";
-        internal const string Save = "save";
-        internal const string Undo = "undo";
-        internal const string NetworkPatchList = "settings/network/patchList";
-
-        internal static string DeleteById(string cueId)
-        {
-            return $"delete_id/{cueId}";
-        }
-    }
-
     internal static string CueTypeName(QLabCueType cueType)
     {
         return cueType switch
@@ -110,5 +68,47 @@ internal static class QLabProtocol
     {
         return string.IsNullOrWhiteSpace(patchType)
                || patchType.Contains("eos", StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static class Addresses
+    {
+        internal const string Workspaces = "/workspaces";
+        internal const string AlwaysReply = "/alwaysReply";
+        internal const string ReplyPrefix = "/reply";
+        internal const string Disconnect = "/disconnect";
+
+        internal static string Workspace(string workspaceId, string command)
+        {
+            return $"/workspace/{workspaceId}/{command}";
+        }
+
+        internal static string Cue(string workspaceId, string cueId, string property)
+        {
+            return $"/workspace/{workspaceId}/cue_id/{cueId}/{property}";
+        }
+    }
+
+    internal static class Reply
+    {
+        internal const string StatusField = "status";
+        internal const string DataField = "data";
+        internal const string OkStatus = "ok";
+        internal const string DeniedStatus = "denied";
+        internal const string BadPassStatus = "badpass";
+    }
+
+    internal static class WorkspaceCommands
+    {
+        internal const string Connect = "connect";
+        internal const string CueListsShallow = "cueLists/shallow";
+        internal const string NewCue = "new";
+        internal const string Save = "save";
+        internal const string Undo = "undo";
+        internal const string NetworkPatchList = "settings/network/patchList";
+
+        internal static string DeleteById(string cueId)
+        {
+            return $"delete_id/{cueId}";
+        }
     }
 }

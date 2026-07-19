@@ -26,5 +26,8 @@ checks.
 
 - Plan-builder self-test verifies that deselecting a Follow cue does not break classification of its following cue.
 - Static checks verify that network patches are selected by QLab unique ID rather than free-text matching.
-- Passcode storage is isolated behind `IQLabPasscodeStore`. The default `SessionQLabPasscodeStore` is process-local and expires values after 24 hours. The optional Keychain-backed `MauiSecurePasscodeStore` is present but not registered and requires a signed Mac Catalyst runtime test before enabling.
-- The tri-state master checkbox uses a small JavaScript bridge because HTML exposes `indeterminate` as a DOM property rather than a persistent attribute.
+- Passcode storage is isolated behind `IQLabPasscodeStore`. The default `SessionQLabPasscodeStore` is process-local and
+  expires values after 24 hours. The optional Keychain-backed `MauiSecurePasscodeStore` is present but not registered
+  and requires a signed Mac Catalyst runtime test before enabling.
+- The tri-state master checkbox uses a small JavaScript bridge because HTML exposes `indeterminate` as a DOM property
+  rather than a persistent attribute.

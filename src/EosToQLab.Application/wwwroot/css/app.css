@@ -380,15 +380,72 @@ button.secondary {
 .diagnostic code {
     color: #f4c66f;
 }
-.drop-zone { position: relative; overflow: hidden; min-height: 180px; border: 1.5px dashed #52749f; border-radius: 14px; background: rgba(8,19,34,.68); display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; color: #c6d9f4; transition: .18s ease; }
-.drop-zone:hover { border-color: #77aaff; background: rgba(27,55,94,.58); transform: translateY(-1px); }
-.drop-zone.disabled { opacity: .55; pointer-events: none; }
-.drop-icon { font-size: 38px; color: #76a9ff; }
-.drop-zone span:last-child { font-size: 12px; color: #8294ad; }
-.source-summary { display: grid; grid-template-columns: 2fr 1fr .6fr; gap: 12px; margin-top: 15px; }
-.source-summary > div { background: rgba(8,18,31,.56); border-radius: 10px; padding: 10px 12px; min-width: 0; }
-.source-summary strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 3px; }
-.label { color: #7f90a8; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; }
+
+.drop-zone {
+    position: relative;
+    overflow: hidden;
+    min-height: 180px;
+    border: 1.5px dashed #52749f;
+    border-radius: 14px;
+    background: rgba(8, 19, 34, .68);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    color: #c6d9f4;
+    transition: .18s ease;
+}
+
+.drop-zone:hover {
+    border-color: #77aaff;
+    background: rgba(27, 55, 94, .58);
+    transform: translateY(-1px);
+}
+
+.drop-zone.disabled {
+    opacity: .55;
+    pointer-events: none;
+}
+
+.drop-icon {
+    font-size: 38px;
+    color: #76a9ff;
+}
+
+.drop-zone span:last-child {
+    font-size: 12px;
+    color: #8294ad;
+}
+
+.source-summary {
+    display: grid;
+    grid-template-columns: 2fr 1fr .6fr;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.source-summary > div {
+    background: rgba(8, 18, 31, .56);
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-width: 0;
+}
+
+.source-summary strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 3px;
+}
+
+.label {
+    color: #7f90a8;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+}
 
 .table-wrap {
     max-height: 470px;
@@ -453,7 +510,11 @@ tbody tr:hover {
     }
 }
 
-button.drop-zone { width: 100%; cursor: pointer; font: inherit; }
+button.drop-zone {
+    width: 100%;
+    cursor: pointer;
+    font: inherit;
+}
 
 .field small {
     color: #7f90a8;

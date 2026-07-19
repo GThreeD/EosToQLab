@@ -17,10 +17,7 @@ public sealed class QLabNetworkCuePlanMapper : QLabPlanItemMapper<QLabNetworkCue
         if (!string.IsNullOrWhiteSpace(item.Notes))
             properties.Add(new QLabCuePropertyAssignment(QLabCueProperty.Notes, item.Notes));
 
-        if (!item.Armed)
-        {
-            properties.Add(new QLabCuePropertyAssignment(QLabCueProperty.Armed, false));
-        }
+        if (!item.Armed) properties.Add(new QLabCuePropertyAssignment(QLabCueProperty.Armed, false));
 
         var eosCommand = QLabEosNetworkCommand.RunCueInSpecificList(
             item.ListNumber,

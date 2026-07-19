@@ -21,6 +21,11 @@ internal sealed class QLabOscReply : IDisposable
 
     public JsonElement Data => Root.TryGetProperty(QLabProtocol.Reply.DataField, out var data) ? data : default;
 
+    public void Dispose()
+    {
+        Document.Dispose();
+    }
+
     public static QLabOscReply Parse(OscMessage message)
     {
         if (!message.Address.StartsWith(QLabProtocol.Addresses.ReplyPrefix, StringComparison.Ordinal))
@@ -51,10 +56,5 @@ internal sealed class QLabOscReply : IDisposable
         if (string.Equals(Status, QLabProtocol.Reply.OkStatus, StringComparison.OrdinalIgnoreCase)) return;
 
         throw new QLabUnexpectedReplyException(Address, Root.GetRawText());
-    }
-
-    public void Dispose()
-    {
-        Document.Dispose();
     }
 }

@@ -12,10 +12,7 @@ public sealed class SessionQLabPasscodeStore : IQLabPasscodeStore
     public Task<string?> GetAsync(string workspaceId)
     {
         var key = NormalizeWorkspaceId(workspaceId);
-        if (!_entries.TryGetValue(key, out var entry))
-        {
-            return Task.FromResult<string?>(null);
-        }
+        if (!_entries.TryGetValue(key, out var entry)) return Task.FromResult<string?>(null);
 
         if (entry.ExpiresAtUtc <= DateTimeOffset.UtcNow)
         {

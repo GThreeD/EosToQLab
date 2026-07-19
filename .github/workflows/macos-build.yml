@@ -11,7 +11,7 @@ jobs:
     runs-on: macos-15
     strategy:
       matrix:
-        architecture: [arm64, x64]
+        architecture: [ arm64, x64 ]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

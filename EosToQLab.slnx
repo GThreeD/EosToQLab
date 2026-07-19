@@ -1,16 +1,16 @@
 <Solution>
     <Folder Name="/Docs/">
-        <File Path="docs\ARCHITECTURE.md" />
-        <File Path="docs\BUILD_AND_TEST.md" />
-        <File Path="docs\QLAB_SAFETY.md" />
-        <File Path="docs\VALIDATION.md" />
+        <File Path="docs\ARCHITECTURE.md"/>
+        <File Path="docs\BUILD_AND_TEST.md"/>
+        <File Path="docs\QLAB_SAFETY.md"/>
+        <File Path="docs\VALIDATION.md"/>
     </Folder>
-    <Folder Name="/SolutionItems/" />
+    <Folder Name="/SolutionItems/"/>
     <Folder Name="/SolutionItems/workflows/">
-        <File Path=".github\workflows\macos-build.yml" />
+        <File Path=".github\workflows\macos-build.yml"/>
     </Folder>
-    <Project Path="src/EosToQLab.Core/EosToQLab.Core.csproj" />
-    <Project Path="src/EosToQLab.Infrastructure/EosToQLab.Infrastructure.csproj" />
-    <Project Path="src\EosToQLab.Application\EosToQLab.Application.csproj" />
-    <Project Path="tests/EosToQLab.SelfTests/EosToQLab.SelfTests.csproj" />
+    <Project Path="src/EosToQLab.Core/EosToQLab.Core.csproj"/>
+    <Project Path="src/EosToQLab.Infrastructure/EosToQLab.Infrastructure.csproj"/>
+    <Project Path="src\EosToQLab.Application\EosToQLab.Application.csproj"/>
+    <Project Path="tests/EosToQLab.SelfTests/EosToQLab.SelfTests.csproj"/>
 </Solution>

@@ -11,7 +11,8 @@
     <div>
         <div class="eyebrow">Import workflow</div>
         <h1>Build a protected QLab cue list from EOS</h1>
-        <p>Choose an EOS CSV or ESF3D file, review and edit the parsed cues, and import them into a workspace that is already open in QLab 5.</p>
+        <p>Choose an EOS CSV or ESF3D file, review and edit the parsed cues, and import them into a workspace that is
+            already open in QLab 5.</p>
     </div>
     <div class="status-pill @(_busy ? "working" : "ready")">
         @(_busy ? "Working…" : "Ready")
@@ -41,7 +42,7 @@
         </div>
 
         <label class="drop-zone @(_busy ? "disabled" : string.Empty)">
-            <InputFile OnChange="LoadSourceAsync" disabled="@_busy" />
+            <InputFile OnChange="LoadSourceAsync" disabled="@_busy"/>
             <span class="drop-icon">⇩</span>
             <strong>Drop a file here or click to choose</strong>
             <span>Accepted: .csv, .esf3d</span>
@@ -79,7 +80,8 @@
 
         <label class="field">
             <span>Workspace</span>
-            <select value="@_selectedWorkspaceId" @onchange="WorkspaceChangedAsync" disabled="@(_busy || _workspaces.Count == 0)">
+            <select value="@_selectedWorkspaceId" @onchange="WorkspaceChangedAsync"
+                    disabled="@(_busy || _workspaces.Count == 0)">
                 <option value="">Select an open workspace</option>
                 @foreach (var workspace in _workspaces)
                 {
@@ -94,8 +96,9 @@
                    value="@_passcode"
                    @onchange="PasscodeChangedAsync"
                    disabled="@(_busy || string.IsNullOrWhiteSpace(_selectedWorkspaceId))"
-                   autocomplete="off" />
-            <small>The passcode is kept only in memory for this app session and expires after 24 hours. It is not written to disk.</small>
+                   autocomplete="off"/>
+            <small>The passcode is kept only in memory for this app session and expires after 24 hours. It is not
+                written to disk.</small>
         </label>
     </section>
 </div>
@@ -105,14 +108,15 @@
         <span class="step-number">3</span>
         <div>
             <h2>Import options</h2>
-            <p>A temporary cue list is populated first. Existing lists remain untouched unless replacement is explicitly confirmed.</p>
+            <p>A temporary cue list is populated first. Existing lists remain untouched unless replacement is explicitly
+                confirmed.</p>
         </div>
     </div>
 
     <div class="form-grid">
         <label class="field">
             <span>New cue list name</span>
-            <input @bind="CueListName" disabled="@_busy" />
+            <input @bind="CueListName" disabled="@_busy"/>
         </label>
         <div class="field">
             <span>QLab network patch</span>
@@ -137,7 +141,8 @@
                 <option value="@SceneTextImportMode.Ignore">Ignore</option>
                 <option value="@SceneTextImportMode.MemoCue">Create memo cues</option>
             </select>
-            <small>Memo cues remain unnumbered. Network cues receive exactly the EOS cue number when that number is available in QLab.</small>
+            <small>Memo cues remain unnumbered. Network cues receive exactly the EOS cue number when that number is
+                available in QLab.</small>
         </label>
         <label class="field">
             <span>Cues triggered by Follow/Hang</span>
@@ -145,21 +150,25 @@
                 <option value="@FollowedCueImportMode.Exclude">Do not import</option>
                 <option value="@FollowedCueImportMode.ImportDisarmed">Import disarmed</option>
             </select>
-            <small>A complete chain is detected per EOS list. For example, 83.1 → 83.2 → 83.3 → 84 marks 83.2 through 84 as automatically triggered.</small>
+            <small>A complete chain is detected per EOS list. For example, 83.1 → 83.2 → 83.3 → 84 marks 83.2 through 84
+                as automatically triggered.</small>
         </label>
     </div>
 
     <div class="checks">
-        <label><input type="checkbox" @bind="_saveWorkspace" disabled="@_busy" /> Save the QLab workspace after a successful import</label>
+        <label><input type="checkbox" @bind="_saveWorkspace" disabled="@_busy"/> Save the QLab workspace after a
+            successful import</label>
     </div>
 
     @if (_conflictDetected)
     {
         <div class="conflict-box">
             <strong>A cue list named “@_cueListName” already exists.</strong>
-            <p>Replacement deletes only that matching list after the new temporary list has been built successfully. Network cue numbers are assigned afterwards, so they can reuse the EOS numbers released by the replaced list; numbers still used elsewhere remain blank.</p>
+            <p>Replacement deletes only that matching list after the new temporary list has been built successfully.
+                Network cue numbers are assigned afterwards, so they can reuse the EOS numbers released by the replaced
+                list; numbers still used elsewhere remain blank.</p>
             <label>
-                <input type="checkbox" @bind="_replacementConsent" disabled="@_busy" />
+                <input type="checkbox" @bind="_replacementConsent" disabled="@_busy"/>
                 I explicitly approve replacing the existing cue list.
             </label>
         </div>
@@ -176,7 +185,8 @@
         <div class="preview-header">
             <div>
                 <h2>Cue preview</h2>
-                <p>Edit label, notes, and scene text before importing. Deselected rows remain part of Follow/Hang analysis but are not created in QLab.</p>
+                <p>Edit label, notes, and scene text before importing. Deselected rows remain part of Follow/Hang
+                    analysis but are not created in QLab.</p>
             </div>
             <div class="selection-toolbar">
                 <label class="selection-master">
@@ -185,11 +195,15 @@
                            checked="@AllCuesSelected"
                            @onchange="ToggleAllCues"
                            disabled="@(_busy || _previewRows.Count == 0)"
-                           aria-checked="@SelectionAriaState" />
+                           aria-checked="@SelectionAriaState"/>
                     <span>@SelectedCueCount / @_previewRows.Count selected</span>
                 </label>
-                <button type="button" class="text-button" @onclick="@(() => SetAllCues(true))" disabled="@(_busy || AllCuesSelected)">Select all</button>
-                <button type="button" class="text-button" @onclick="@(() => SetAllCues(false))" disabled="@(_busy || SelectedCueCount == 0)">Deselect all</button>
+                <button type="button" class="text-button" @onclick="@(() => SetAllCues(true))"
+                        disabled="@(_busy || AllCuesSelected)">Select all
+                </button>
+                <button type="button" class="text-button" @onclick="@(() => SetAllCues(false))"
+                        disabled="@(_busy || SelectedCueCount == 0)">Deselect all
+                </button>
             </div>
         </div>
 
@@ -224,13 +238,17 @@
                 {
                     <tr class="@(row.IsSelected ? string.Empty : "preview-row-excluded")">
                         <td class="selection-column">
-                            <input type="checkbox" @bind="row.IsSelected" disabled="@_busy" aria-label="Import cue @row.DisplayCueNumber" />
+                            <input type="checkbox" @bind="row.IsSelected" disabled="@_busy"
+                                   aria-label="Import cue @row.DisplayCueNumber"/>
                         </td>
                         <td>@(row.SourceOrder + 1)</td>
                         <td><strong>@row.DisplayCueNumber</strong></td>
-                        <td><input class="preview-input" @bind="row.Label" disabled="@_busy" aria-label="Label for cue @row.DisplayCueNumber" /></td>
-                        <td><input class="preview-input" @bind="row.Notes" disabled="@_busy" aria-label="Notes for cue @row.DisplayCueNumber" /></td>
-                        <td><input class="preview-input" @bind="row.Scene" disabled="@_busy" aria-label="Scene for cue @row.DisplayCueNumber" /></td>
+                        <td><input class="preview-input" @bind="row.Label" disabled="@_busy"
+                                   aria-label="Label for cue @row.DisplayCueNumber"/></td>
+                        <td><input class="preview-input" @bind="row.Notes" disabled="@_busy"
+                                   aria-label="Notes for cue @row.DisplayCueNumber"/></td>
+                        <td><input class="preview-input" @bind="row.Scene" disabled="@_busy"
+                                   aria-label="Scene for cue @row.DisplayCueNumber"/></td>
                         <td>@(row.Follow ?? "—")</td>
                     </tr>
                 }
@@ -335,10 +353,10 @@
         }
 
         var initialCapacity = sourceSize.HasValue
-            && sourceSize.Value > 0
-            && sourceSize.Value <= int.MaxValue
-                ? (int)sourceSize.Value
-                : 0;
+                              && sourceSize.Value > 0
+                              && sourceSize.Value <= int.MaxValue
+            ? (int)sourceSize.Value
+            : 0;
         using var content = new MemoryStream(initialCapacity);
         await source.CopyToAsync(content);
         if (content.Length > MaximumSourceSize)
@@ -434,7 +452,7 @@
             .ToArray();
 
         _selectedNetworkPatchId = _networkPatches.Any(patch =>
-                string.Equals(patch.Id, previousSelection, StringComparison.OrdinalIgnoreCase))
+            string.Equals(patch.Id, previousSelection, StringComparison.OrdinalIgnoreCase))
             ? previousSelection
             : _networkPatches.Count == 1
                 ? _networkPatches[0].Id
@@ -558,4 +576,5 @@
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
+
 }

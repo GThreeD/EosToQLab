@@ -3,16 +3,16 @@ using EosToQLab.Core.Exceptions;
 namespace EosToQLab.Infrastructure.QLab.Osc;
 
 /// <summary>
-/// Stateful buffered reader for double-END SLIP frames.
-/// It preserves bytes already read beyond the current frame, avoiding one
-/// asynchronous stream read per byte while keeping frame boundaries intact.
+///     Stateful buffered reader for double-END SLIP frames.
+///     It preserves bytes already read beyond the current frame, avoiding one
+///     asynchronous stream read per byte while keeping frame boundaries intact.
 /// </summary>
 internal sealed class SlipStreamReader
 {
-    private readonly Stream _stream;
     private readonly byte[] _buffer;
-    private int _offset;
+    private readonly Stream _stream;
     private int _length;
+    private int _offset;
 
     public SlipStreamReader(Stream stream, int bufferSize = 8192)
     {
