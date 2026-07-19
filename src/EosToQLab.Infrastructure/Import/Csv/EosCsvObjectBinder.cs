@@ -9,11 +9,14 @@ internal sealed class EosCsvObjectBinder<T> where T : new()
     private static readonly IReadOnlyList<PropertyBinding> Bindings = CreateBindings();
 
     public IReadOnlyCollection<string> FindMissingRequiredColumns(
-        IReadOnlyDictionary<string, int> columns) => Bindings
-        .Where(binding => binding.Attribute.Required
-            && ResolveColumnName(binding.Attribute, columns) is null)
-        .Select(binding => binding.Attribute.Name)
-        .ToArray();
+        IReadOnlyDictionary<string, int> columns)
+    {
+        return Bindings
+            .Where(binding => binding.Attribute.Required
+                              && ResolveColumnName(binding.Attribute, columns) is null)
+            .Select(binding => binding.Attribute.Name)
+            .ToArray();
+    }
 
     public T Bind(
         IReadOnlyList<string> row,
@@ -24,10 +27,7 @@ internal sealed class EosCsvObjectBinder<T> where T : new()
         foreach (var binding in Bindings)
         {
             var columnName = ResolveColumnName(binding.Attribute, columns);
-            if (columnName is null)
-            {
-                continue;
-            }
+            if (columnName is null) continue;
 
             var index = columns[columnName];
             var rawValue = index < row.Count ? row[index] : string.Empty;
@@ -37,7 +37,8 @@ internal sealed class EosCsvObjectBinder<T> where T : new()
             {
                 binding.Property.SetValue(instance, ConvertValue(value, binding.Property.PropertyType));
             }
-            catch (Exception exception) when (exception is FormatException or OverflowException or ArgumentException or TargetInvocationException)
+            catch (Exception exception) when (exception is FormatException or OverflowException or ArgumentException
+                                                  or TargetInvocationException)
             {
                 throw new CsvValueConversionException(
                     binding.Attribute.Name,
@@ -55,10 +56,7 @@ internal sealed class EosCsvObjectBinder<T> where T : new()
         EosCsvColumnAttribute attribute,
         IReadOnlyDictionary<string, int> columns)
     {
-        if (columns.ContainsKey(attribute.Name))
-        {
-            return attribute.Name;
-        }
+        if (columns.ContainsKey(attribute.Name)) return attribute.Name;
 
         return attribute.Aliases.FirstOrDefault(columns.ContainsKey);
     }
@@ -69,38 +67,21 @@ internal sealed class EosCsvObjectBinder<T> where T : new()
         var targetType = nullableType ?? propertyType;
         if (string.IsNullOrWhiteSpace(value))
         {
-            if (targetType == typeof(string))
-            {
-                return null;
-            }
+            if (targetType == typeof(string)) return null;
 
-            if (nullableType is not null)
-            {
-                return null;
-            }
+            if (nullableType is not null) return null;
 
             return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
         }
 
-        if (targetType == typeof(string))
-        {
-            return value;
-        }
+        if (targetType == typeof(string)) return value;
 
-        if (targetType == typeof(int))
-        {
-            return int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
-        }
+        if (targetType == typeof(int)) return int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
 
         if (targetType == typeof(decimal))
-        {
             return decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture);
-        }
 
-        if (targetType.IsEnum)
-        {
-            return Enum.Parse(targetType, value, ignoreCase: true);
-        }
+        if (targetType.IsEnum) return Enum.Parse(targetType, value, true);
 
         return Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
     }
@@ -111,15 +92,9 @@ internal sealed class EosCsvObjectBinder<T> where T : new()
         foreach (var property in typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public))
         {
             var attribute = property.GetCustomAttribute<EosCsvColumnAttribute>();
-            if (attribute is null)
-            {
-                continue;
-            }
+            if (attribute is null) continue;
 
-            if (property.SetMethod is null)
-            {
-                throw new CsvColumnBindingException(property.Name);
-            }
+            if (property.SetMethod is null) throw new CsvColumnBindingException(property.Name);
 
             bindings.Add(new PropertyBinding(property, attribute));
         }

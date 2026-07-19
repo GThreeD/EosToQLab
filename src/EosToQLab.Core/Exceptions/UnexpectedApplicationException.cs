@@ -6,5 +6,7 @@ public sealed class UnexpectedApplicationException : EosToQLabException
         : base(
             "UNEXPECTED_APPLICATION_ERROR",
             "An unexpected application error occurred. Review the inner exception for technical details.",
-            innerException) { }
+            innerException)
+    {
+    }
 }

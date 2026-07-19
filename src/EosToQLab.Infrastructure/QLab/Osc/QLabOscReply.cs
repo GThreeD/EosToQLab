@@ -1,6 +1,5 @@
 using System.Text.Json;
 using EosToQLab.Core.Exceptions;
-using EosToQLab.Infrastructure.QLab;
 
 namespace EosToQLab.Infrastructure.QLab.Osc;
 
@@ -15,20 +14,21 @@ internal sealed class QLabOscReply : IDisposable
     public string Address { get; }
     public JsonDocument Document { get; }
     public JsonElement Root => Document.RootElement;
-    public string Status => Root.TryGetProperty(QLabProtocol.Reply.StatusField, out var status) ? status.GetString() ?? string.Empty : string.Empty;
+
+    public string Status => Root.TryGetProperty(QLabProtocol.Reply.StatusField, out var status)
+        ? status.GetString() ?? string.Empty
+        : string.Empty;
+
     public JsonElement Data => Root.TryGetProperty(QLabProtocol.Reply.DataField, out var data) ? data : default;
 
     public static QLabOscReply Parse(OscMessage message)
     {
         if (!message.Address.StartsWith(QLabProtocol.Addresses.ReplyPrefix, StringComparison.Ordinal))
-        {
             throw new QLabUnexpectedReplyException(message.Address, "The OSC message is not a QLab reply.");
-        }
 
         if (message.Arguments.Count == 0 || message.Arguments[0] is not string json)
-        {
-            throw new QLabUnexpectedReplyException(message.Address, "The QLab reply does not contain a JSON string argument.");
-        }
+            throw new QLabUnexpectedReplyException(message.Address,
+                "The QLab reply does not contain a JSON string argument.");
 
         try
         {
@@ -46,17 +46,15 @@ internal sealed class QLabOscReply : IDisposable
         if (string.Equals(Status, QLabProtocol.Reply.DeniedStatus, StringComparison.OrdinalIgnoreCase)
             || string.Equals(Status, QLabProtocol.Reply.BadPassStatus, StringComparison.OrdinalIgnoreCase)
             || string.Equals(dataText, QLabProtocol.Reply.BadPassStatus, StringComparison.OrdinalIgnoreCase))
-        {
             throw new QLabAccessDeniedException(workspaceName);
-        }
 
-        if (string.Equals(Status, QLabProtocol.Reply.OkStatus, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
+        if (string.Equals(Status, QLabProtocol.Reply.OkStatus, StringComparison.OrdinalIgnoreCase)) return;
 
         throw new QLabUnexpectedReplyException(Address, Root.GetRawText());
     }
 
-    public void Dispose() => Document.Dispose();
+    public void Dispose()
+    {
+        Document.Dispose();
+    }
 }

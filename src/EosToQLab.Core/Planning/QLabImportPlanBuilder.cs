@@ -1,3 +1,4 @@
+using System.Globalization;
 using EosToQLab.Core.Diagnostics;
 using EosToQLab.Core.Models;
 
@@ -20,7 +21,7 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
         foreach (var cue in cues.OrderBy(cue => cue.SourceOrder))
         {
             var skipCurrent = options.SkipCueAfterFollowOrHang
-                && skipNextByList.GetValueOrDefault(cue.ListNumber);
+                              && skipNextByList.GetValueOrDefault(cue.ListNumber);
 
             if (skipCurrent)
             {
@@ -31,7 +32,7 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
                 AddSceneMemoIfNeeded(items, cue, options, ref previousScene);
                 items.Add(new QLabNetworkCuePlan(
                     NullToEmpty(cue.Label),
-                    cue.ListNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    cue.ListNumber.ToString(CultureInfo.InvariantCulture),
                     cue.CueNumber,
                     cue.CueNumber,
                     NullIfWhiteSpace(cue.CueNotes)));
@@ -52,17 +53,19 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
         if (options.SceneTextMode != SceneTextImportMode.MemoCue
             || string.IsNullOrWhiteSpace(cue.SceneText)
             || string.Equals(previousScene, cue.SceneText, StringComparison.Ordinal))
-        {
             return;
-        }
 
         previousScene = cue.SceneText;
-        items.Add(new QLabMemoCuePlan(cue.SceneText.Trim(), Notes: null));
+        items.Add(new QLabMemoCuePlan(cue.SceneText.Trim(), null));
     }
 
-    private static string NullToEmpty(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    private static string NullToEmpty(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    }
 
-    private static string? NullIfWhiteSpace(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? NullIfWhiteSpace(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
 }

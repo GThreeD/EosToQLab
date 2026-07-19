@@ -7,8 +7,9 @@ public partial class Application
         InitializeComponent();
     }
 
-    protected override Window CreateWindow(IActivationState? activationState) =>
-        new(new MainPage())
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
+        return new(new MainPage())
         {
             Title = "EosToQLab",
             Width = 1180,
@@ -16,4 +17,5 @@ public partial class Application
             MinimumWidth = 900,
             MinimumHeight = 640
         };
+    }
 }

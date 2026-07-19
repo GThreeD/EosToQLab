@@ -13,8 +13,10 @@ public sealed class CsvEosCueImporter : IEosCueImporter
 
     public EosSourceKind SourceKind => EosSourceKind.Csv;
 
-    public bool CanImport(string fileName) =>
-        string.Equals(Path.GetExtension(fileName), ".csv", StringComparison.OrdinalIgnoreCase);
+    public bool CanImport(string fileName)
+    {
+        return string.Equals(Path.GetExtension(fileName), ".csv", StringComparison.OrdinalIgnoreCase);
+    }
 
     public async Task<EosImportResult> ImportAsync(
         EosImportRequest request,
@@ -28,44 +30,30 @@ public sealed class CsvEosCueImporter : IEosCueImporter
             using var reader = new StreamReader(
                 request.Content,
                 Encoding.UTF8,
-                detectEncodingFromByteOrderMarks: true,
-                bufferSize: 16 * 1024,
-                leaveOpen: true);
+                true,
+                16 * 1024,
+                true);
             text = await reader.ReadToEndAsync(cancellationToken);
         }
-        catch (Exception exception) when (exception is IOException or DecoderFallbackException or ObjectDisposedException)
+        catch (Exception exception) when (exception is IOException or DecoderFallbackException
+                                              or ObjectDisposedException)
         {
             throw new CsvReadException(request.FileName, exception);
         }
 
         var records = CsvRecordReader.Parse(text.TrimStart('\uFEFF'));
         var startIndex = FindMarker(records, "START_TARGETS");
-        if (startIndex < 0)
-        {
-            throw new CsvStartMarkerMissingException(request.FileName);
-        }
+        if (startIndex < 0) throw new CsvStartMarkerMissingException(request.FileName);
 
-        if (startIndex + 1 >= records.Count)
-        {
-            throw new CsvHeaderMissingException(request.FileName);
-        }
+        if (startIndex + 1 >= records.Count) throw new CsvHeaderMissingException(request.FileName);
 
         var columns = CreateColumnMap(records[startIndex + 1]);
         var missing = Binder.FindMissingRequiredColumns(columns);
-        if (missing.Count > 0)
-        {
-            throw new CsvRequiredColumnMissingException(request.FileName, missing);
-        }
+        if (missing.Count > 0) throw new CsvRequiredColumnMissingException(request.FileName, missing);
 
         var diagnostics = new List<EosDiagnostic>();
-        if (!columns.ContainsKey("FOLLOW"))
-        {
-            diagnostics.Add(new CsvFollowColumnMissingWarning());
-        }
-        if (!columns.ContainsKey("SCENE_TEXT"))
-        {
-            diagnostics.Add(new CsvSceneTextColumnMissingWarning());
-        }
+        if (!columns.ContainsKey("FOLLOW")) diagnostics.Add(new CsvFollowColumnMissingWarning());
+        if (!columns.ContainsKey("SCENE_TEXT")) diagnostics.Add(new CsvSceneTextColumnMissingWarning());
 
         var endIndex = FindMarker(records, "END_TARGETS", startIndex + 2);
         if (endIndex < 0)
@@ -81,10 +69,7 @@ public sealed class CsvEosCueImporter : IEosCueImporter
             cancellationToken.ThrowIfCancellationRequested();
             var rowNumber = recordIndex + 1;
             var csvCue = Binder.Bind(records[recordIndex], columns, rowNumber);
-            if (!string.Equals(csvCue.TargetTypeAsText, "Cue", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
+            if (!string.Equals(csvCue.TargetTypeAsText, "Cue", StringComparison.OrdinalIgnoreCase)) continue;
 
             if (string.IsNullOrWhiteSpace(csvCue.TargetId))
             {
@@ -96,10 +81,7 @@ public sealed class CsvEosCueImporter : IEosCueImporter
         }
 
         var cues = AggregateAndMap(sourceRows, diagnostics);
-        if (cues.Count == 0)
-        {
-            diagnostics.Add(new NoCuesFoundWarning());
-        }
+        if (cues.Count == 0) diagnostics.Add(new NoCuesFoundWarning());
 
         return new EosImportResult(
             cues,
@@ -121,10 +103,7 @@ public sealed class CsvEosCueImporter : IEosCueImporter
         foreach (var group in grouped)
         {
             var root = group.FirstOrDefault(row => !row.Cue.IsPart);
-            if (root.Cue is null)
-            {
-                root = group.First();
-            }
+            if (root.Cue is null) root = group.First();
 
             partCount += group.Count(row => row.Cue.IsPart);
             var source = root.Cue;
@@ -143,16 +122,14 @@ public sealed class CsvEosCueImporter : IEosCueImporter
             });
         }
 
-        if (partCount > 0)
-        {
-            diagnostics.Add(new CsvCuePartsMergedWarning(partCount));
-        }
+        if (partCount > 0) diagnostics.Add(new CsvCuePartsMergedWarning(partCount));
 
         return result;
     }
 
-    private static IReadOnlyDictionary<string, string?> BuildAdditionalValues(EosCsvCue cue) =>
-        new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+    private static IReadOnlyDictionary<string, string?> BuildAdditionalValues(EosCsvCue cue)
+    {
+        return new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {
             ["TIME_DATA"] = cue.TimeData,
             ["UP_DELAY"] = cue.UpDelay,
@@ -182,28 +159,39 @@ public sealed class CsvEosCueImporter : IEosCueImporter
             ["WIDTH"] = cue.Width,
             ["HEIGHT"] = cue.Height
         };
+    }
 
-    private static string BuildIdentity(EosCsvCue cue) =>
-        !string.IsNullOrWhiteSpace(cue.TargetDcid)
+    private static string BuildIdentity(EosCsvCue cue)
+    {
+        return !string.IsNullOrWhiteSpace(cue.TargetDcid)
             ? $"{cue.TargetListNumber}|{cue.TargetId}|{cue.TargetDcid}"
             : $"{cue.TargetListNumber}|{cue.TargetId}";
+    }
 
-    private static string NormalizeCueNumber(string value) =>
-        decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number)
+    private static string NormalizeCueNumber(string value)
+    {
+        return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number)
             ? number.ToString("0.############################", CultureInfo.InvariantCulture)
             : value.Trim();
+    }
 
-    private static string? FirstNonEmpty(IEnumerable<string?> values) =>
-        values.Select(NullIfWhiteSpace).FirstOrDefault(value => value is not null);
+    private static string? FirstNonEmpty(IEnumerable<string?> values)
+    {
+        return values.Select(NullIfWhiteSpace).FirstOrDefault(value => value is not null);
+    }
 
-    private static string? NullIfWhiteSpace(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? NullIfWhiteSpace(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
 
-    private static IReadOnlyDictionary<string, int> CreateColumnMap(IReadOnlyList<string> header) =>
-        header.Select((name, index) => (Name: name.Trim(), Index: index))
+    private static IReadOnlyDictionary<string, int> CreateColumnMap(IReadOnlyList<string> header)
+    {
+        return header.Select((name, index) => (Name: name.Trim(), Index: index))
             .Where(item => item.Name.Length > 0)
             .GroupBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().Index, StringComparer.OrdinalIgnoreCase);
+    }
 
     private static int FindMarker(
         IReadOnlyList<IReadOnlyList<string>> records,
@@ -211,13 +199,9 @@ public sealed class CsvEosCueImporter : IEosCueImporter
         int start = 0)
     {
         for (var index = start; index < records.Count; index++)
-        {
             if (records[index].Count > 0
                 && string.Equals(records[index][0].Trim().TrimStart('\uFEFF'), marker, StringComparison.Ordinal))
-            {
                 return index;
-            }
-        }
 
         return -1;
     }

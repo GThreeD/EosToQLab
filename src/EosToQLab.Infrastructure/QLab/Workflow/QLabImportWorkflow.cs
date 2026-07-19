@@ -29,17 +29,13 @@ public sealed class QLabImportWorkflow(
         if (conflict is not null
             && (options.ConflictPolicy != CueListConflictPolicy.ReplaceWithExplicitConsent
                 || !options.ExplicitReplacementConsent))
-        {
             throw new QLabCueListConflictException(options.CueListName);
-        }
 
         var networkPatch = await session.FindNetworkPatchAsync(
             options.NetworkPatchName,
             cancellationToken);
         if (!QLabProtocol.IsEosNetworkPatchType(networkPatch.Type))
-        {
             throw new QLabNetworkPatchTypeMismatchException(networkPatch.Name, networkPatch.Type ?? string.Empty);
-        }
 
         var plan = planBuilder.Build(cues, options);
         var originalCueListId = await session.GetCurrentCueListIdAsync(cancellationToken);
@@ -116,10 +112,7 @@ public sealed class QLabImportWorkflow(
                 executionResult.PendingCueNumbers,
                 cancellationToken);
 
-            if (options.SaveWorkspaceAfterImport)
-            {
-                await session.SaveWorkspaceAsync(cancellationToken);
-            }
+            if (options.SaveWorkspaceAfterImport) await session.SaveWorkspaceAsync(cancellationToken);
 
             return new QLabImportResult(
                 workspace.Id,
@@ -135,9 +128,7 @@ public sealed class QLabImportWorkflow(
                 if (conflictDeleted)
                 {
                     for (var index = 0; index < assignedCueNumberCount; index++)
-                    {
                         await session.UndoAsync(CancellationToken.None);
-                    }
 
                     await session.UndoAsync(CancellationToken.None);
                 }
@@ -149,21 +140,17 @@ public sealed class QLabImportWorkflow(
                     CancellationToken.None);
 
                 if (conflict is not null && conflictRenamed)
-                {
                     await session.RenameCueListAsync(
                         conflict.Id,
                         conflictBackupName ?? conflict.Name,
                         conflict.Name,
                         CancellationToken.None);
-                }
 
                 if (!string.IsNullOrWhiteSpace(originalCueListId))
-                {
                     await session.SetWorkspacePropertyAsync(
                         QLabWorkspaceProperty.CurrentCueListId,
                         originalCueListId,
                         CancellationToken.None);
-                }
 
                 await session.DeleteCueListAsync(
                     temporaryCueListId,
@@ -171,9 +158,7 @@ public sealed class QLabImportWorkflow(
                     CancellationToken.None);
 
                 if (preDeletionSaveCompleted && options.SaveWorkspaceAfterImport)
-                {
                     await session.SaveWorkspaceAsync(CancellationToken.None);
-                }
             }
             catch (Exception rollbackException)
             {

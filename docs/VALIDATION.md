@@ -14,8 +14,10 @@ Validation performed in the generation environment:
 
 Not performed in this environment:
 
-- C# compilation, because a .NET SDK was not available in the Linux runtime and external binary installation was blocked.
+- C# compilation, because a .NET SDK was not available in the Linux runtime and external binary installation was
+  blocked.
 - Mac Catalyst compilation, signing, or notarization, which require macOS and Xcode.
 - Live QLab OSC integration, which requires QLab 5 running on macOS.
 
-The repository includes a macOS GitHub Actions workflow and a manual QLab integration test plan for these remaining checks.
+The repository includes a macOS GitHub Actions workflow and a manual QLab integration test plan for these remaining
+checks.

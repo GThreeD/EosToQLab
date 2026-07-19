@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>EosToQLab.SelfTests</RootNamespace>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="../../src/EosToQLab.Core/EosToQLab.Core.csproj" />
-    <ProjectReference Include="../../src/EosToQLab.Infrastructure/EosToQLab.Infrastructure.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="../../samples/reference-eos.csv" Link="samples/reference-eos.csv" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="../../samples/synthetic-parser-fixture.esf3d" Link="samples/synthetic-parser-fixture.esf3d" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <RootNamespace>EosToQLab.SelfTests</RootNamespace>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../../src/EosToQLab.Core/EosToQLab.Core.csproj"/>
+        <ProjectReference Include="../../src/EosToQLab.Infrastructure/EosToQLab.Infrastructure.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="../../samples/reference-eos.csv" Link="samples/reference-eos.csv" CopyToOutputDirectory="PreserveNewest"/>
+        <None Include="../../samples/synthetic-parser-fixture.esf3d" Link="samples/synthetic-parser-fixture.esf3d" CopyToOutputDirectory="PreserveNewest"/>
+    </ItemGroup>
 </Project>

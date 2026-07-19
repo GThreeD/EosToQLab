@@ -26,7 +26,6 @@ var tests = new List<(string Name, Func<Task> Run)>
 
 var failures = new List<string>();
 foreach (var test in tests)
-{
     try
     {
         await test.Run();
@@ -38,7 +37,6 @@ foreach (var test in tests)
         Console.WriteLine($"FAIL  {test.Name}");
         Console.WriteLine(exception);
     }
-}
 
 if (failures.Count > 0)
 {
@@ -49,8 +47,11 @@ if (failures.Count > 0)
 Console.WriteLine($"All {tests.Count} self-tests passed.");
 return 0;
 
-static IEosCueImporterFactory CreateFactory() => new EosCueImporterFactory(
-    new IEosCueImporter[] { new CsvEosCueImporter(), new Esf3dEosCueImporter() });
+static IEosCueImporterFactory CreateFactory()
+{
+    return new EosCueImporterFactory(
+        new IEosCueImporter[] { new CsvEosCueImporter(), new Esf3dEosCueImporter() });
+}
 
 static Task TestFactoryAsync()
 {
@@ -92,8 +93,10 @@ static async Task TestEsf3dAsync()
 
     var second = result.Cues.Single(cue => cue.CueNumber == "2");
     Assert(second.Follow == "H1.5", "The structured ESF3D hang value was not mapped.");
-    Assert(!result.Diagnostics.OfType<Esf3dFollowNotDecodedWarning>().Any(), "A decoded follow/hang value was reported as unsupported.");
-    Assert(result.Diagnostics.OfType<Esf3dLossTolerantParsingWarning>().Any(), "The loss-tolerant parser warning is missing.");
+    Assert(!result.Diagnostics.OfType<Esf3dFollowNotDecodedWarning>().Any(),
+        "A decoded follow/hang value was reported as unsupported.");
+    Assert(result.Diagnostics.OfType<Esf3dLossTolerantParsingWarning>().Any(),
+        "The loss-tolerant parser warning is missing.");
 }
 
 static Task TestFollowLogicAsync()
@@ -110,7 +113,8 @@ static Task TestFollowLogicAsync()
 
     Assert(networkCues.Length == 2, "Follow/hang did not skip exactly one cue.");
     Assert(networkCues[0].CueNumber == "1" && networkCues[1].CueNumber == "3", "The wrong cue was skipped.");
-    Assert(diagnostics.OfType<CueSkippedAfterFollowOrHangWarning>().Count() == 1, "The skip warning count is incorrect.");
+    Assert(diagnostics.OfType<CueSkippedAfterFollowOrHangWarning>().Count() == 1,
+        "The skip warning count is incorrect.");
     return Task.CompletedTask;
 }
 
@@ -118,9 +122,9 @@ static Task TestSceneTextAsync()
 {
     var cues = new[]
     {
-        Cue(0, "1", label: "Network A", notes: "Note A", scene: "Scene A"),
-        Cue(1, "2", label: "Network B", scene: "Scene A"),
-        Cue(2, "3", label: "Network C", notes: "Note C", scene: "Scene B")
+        Cue(0, "1", "Network A", "Note A", scene: "Scene A"),
+        Cue(1, "2", "Network B", scene: "Scene A"),
+        Cue(2, "3", "Network C", "Note C", scene: "Scene B")
     };
     var plan = new QLabImportPlanBuilder().Build(cues, Options());
     var memos = plan.Items.OfType<QLabMemoCuePlan>().ToArray();
@@ -206,7 +210,7 @@ static Task TestNetworkMapperAsync()
         property.Property == QLabCueProperty.NetworkPatchId
         && Equals(property.Value, patch.Id)), "Network patch property is missing.");
     Assert(request.CueProperties.All(property =>
-        property.Property != QLabCueProperty.Number),
+            property.Property != QLabCueProperty.Number),
         "The mapper must defer QLab number assignment until all cues are unnumbered.");
     Assert(request.DesiredCueNumber == "2",
         "The desired QLab number must equal the EOS cue number exactly.");
@@ -222,7 +226,7 @@ static Task TestNetworkMapperAsync()
 static async Task TestRejectedNumberLeavesBlankAsync()
 {
     var patch = new QLabNetworkPatch("patch-id", "EOS", "eos");
-    await using var session = new TrackingNumberSession(patch.Id, rejectedNumbers: ["1"]);
+    await using var session = new TrackingNumberSession(patch.Id, ["1"]);
     var executor = new QLabImportPlanExecutor([new QLabNetworkCuePlanMapper()]);
     var plan = new QLabImportPlan(
     [
@@ -282,35 +286,38 @@ static EosCue Cue(
     string? notes = null,
     string? follow = null,
     string? scene = null,
-    int listNumber = 1) => new()
+    int listNumber = 1)
 {
-    SourceOrder = order,
-    ListNumber = listNumber,
-    CueNumber = number,
-    Label = label,
-    CueNotes = notes,
-    Follow = follow,
-    SceneText = scene,
-    SourceKind = EosSourceKind.Csv
-};
+    return new EosCue
+    {
+        SourceOrder = order,
+        ListNumber = listNumber,
+        CueNumber = number,
+        Label = label,
+        CueNotes = notes,
+        Follow = follow,
+        SceneText = scene,
+        SourceKind = EosSourceKind.Csv
+    };
+}
 
-static QLabImportOptions Options() => new()
+static QLabImportOptions Options()
 {
-    WorkspaceId = "test",
-    CueListName = "Test",
-    SceneTextMode = SceneTextImportMode.MemoCue,
-    NetworkPatchName = "Eos"
-};
+    return new QLabImportOptions
+    {
+        WorkspaceId = "test",
+        CueListName = "Test",
+        SceneTextMode = SceneTextImportMode.MemoCue,
+        NetworkPatchName = "Eos"
+    };
+}
 
 static void Assert(bool condition, string message)
 {
-    if (!condition)
-    {
-        throw new InvalidOperationException(message);
-    }
+    if (!condition) throw new InvalidOperationException(message);
 }
 
-sealed class TrackingNumberSession : IQLabOscSession
+internal sealed class TrackingNumberSession : IQLabOscSession
 {
     private readonly string _patchId;
     private readonly HashSet<string> _rejectedNumbers;
@@ -319,7 +326,7 @@ sealed class TrackingNumberSession : IQLabOscSession
     {
         _patchId = patchId;
         _rejectedNumbers = rejectedNumbers?.ToHashSet(StringComparer.OrdinalIgnoreCase)
-            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                           ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 
     public QLabWorkspace Workspace { get; } = new("workspace", "Test", null);
@@ -331,7 +338,10 @@ sealed class TrackingNumberSession : IQLabOscSession
     public Task<string> CreateCueAsync(
         QLabCueType cueType,
         string cueName,
-        CancellationToken cancellationToken = default) => Task.FromResult("cue-id");
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult("cue-id");
+    }
 
     public Task SetCuePropertyAsync(
         string cueId,
@@ -344,11 +354,9 @@ sealed class TrackingNumberSession : IQLabOscSession
             var number = value?.ToString() ?? string.Empty;
             NumberWrites.Add(number);
             if (number.Length > 0 && _rejectedNumbers.Contains(number))
-            {
                 throw new QLabUnexpectedReplyException(
                     "/reply/workspace/workspace/cue_id/cue-id/number",
                     "{\"status\":\"error\"}");
-            }
 
             CurrentNumber = number;
             return Task.CompletedTask;
@@ -371,36 +379,59 @@ sealed class TrackingNumberSession : IQLabOscSession
     public Task<string?> QueryCuePropertyAsync(
         string cueId,
         QLabCueProperty property,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult<string?>(property == QLabCueProperty.NetworkPatchId
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<string?>(property == QLabCueProperty.NetworkPatchId
             ? _patchId
             : property == QLabCueProperty.Number
                 ? CurrentNumber
                 : null);
+    }
 
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
 
-    public Task<IReadOnlyList<QLabCueList>> GetCueListsAsync(CancellationToken cancellationToken = default) =>
+    public Task<IReadOnlyList<QLabCueList>> GetCueListsAsync(CancellationToken cancellationToken = default)
+    {
         throw new NotSupportedException();
+    }
 
-    public Task<QLabNetworkPatch> FindNetworkPatchAsync(string patchName, CancellationToken cancellationToken = default) =>
+    public Task<QLabNetworkPatch> FindNetworkPatchAsync(string patchName, CancellationToken cancellationToken = default)
+    {
         throw new NotSupportedException();
+    }
 
-    public Task<string?> GetCurrentCueListIdAsync(CancellationToken cancellationToken = default) =>
+    public Task<string?> GetCurrentCueListIdAsync(CancellationToken cancellationToken = default)
+    {
         throw new NotSupportedException();
+    }
 
-    public Task SetWorkspacePropertyAsync(QLabWorkspaceProperty property, object? value, CancellationToken cancellationToken = default) =>
+    public Task SetWorkspacePropertyAsync(QLabWorkspaceProperty property, object? value,
+        CancellationToken cancellationToken = default)
+    {
         throw new NotSupportedException();
+    }
 
-    public Task RenameCueListAsync(string cueListId, string currentName, string targetName, CancellationToken cancellationToken = default) =>
+    public Task RenameCueListAsync(string cueListId, string currentName, string targetName,
+        CancellationToken cancellationToken = default)
+    {
         throw new NotSupportedException();
+    }
 
-    public Task DeleteCueListAsync(string cueListId, string cueListName, CancellationToken cancellationToken = default) =>
+    public Task DeleteCueListAsync(string cueListId, string cueListName, CancellationToken cancellationToken = default)
+    {
         throw new NotSupportedException();
+    }
 
-    public Task SaveWorkspaceAsync(CancellationToken cancellationToken = default) =>
+    public Task SaveWorkspaceAsync(CancellationToken cancellationToken = default)
+    {
         throw new NotSupportedException();
+    }
 
-    public Task UndoAsync(CancellationToken cancellationToken = default) =>
+    public Task UndoAsync(CancellationToken cancellationToken = default)
+    {
         throw new NotSupportedException();
+    }
 }

@@ -6,5 +6,7 @@ public sealed class QLabRequestTimeoutException : EosToQLabException
         : base(
             "QLAB_REQUEST_TIMEOUT",
             $"QLab did not reply to '{address}' within {timeout.TotalSeconds:0} seconds.",
-            innerException) { }
+            innerException)
+    {
+    }
 }

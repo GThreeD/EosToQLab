@@ -28,10 +28,7 @@ public sealed class QLabOscService : IQLabOscService
         reply.EnsureOk("QLab");
 
         var workspaces = QLabJsonParser.ParseWorkspaces(reply.Data);
-        if (workspaces.Count == 0)
-        {
-            throw new QLabNoOpenWorkspaceException();
-        }
+        if (workspaces.Count == 0) throw new QLabNoOpenWorkspaceException();
 
         return workspaces;
     }
@@ -70,9 +67,9 @@ public sealed class QLabOscService : IQLabOscService
         reply.EnsureOk("QLab");
 
         return QLabJsonParser.ParseWorkspaces(reply.Data)
-            .FirstOrDefault(candidate =>
-                string.Equals(candidate.Id, workspaceId, StringComparison.OrdinalIgnoreCase))
-            ?? throw new QLabWorkspaceNotFoundException(workspaceId);
+                   .FirstOrDefault(candidate =>
+                       string.Equals(candidate.Id, workspaceId, StringComparison.OrdinalIgnoreCase))
+               ?? throw new QLabWorkspaceNotFoundException(workspaceId);
     }
 
     private static async Task ConnectWorkspaceAsync(

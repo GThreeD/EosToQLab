@@ -5,5 +5,7 @@ public sealed class QLabCueListDeletionVerificationException : EosToQLabExceptio
     public QLabCueListDeletionVerificationException(string cueListName)
         : base(
             "QLAB_CUE_LIST_DELETION_NOT_APPLIED",
-            $"QLab still reports cue list '{cueListName}' after the deletion request.") { }
+            $"QLab still reports cue list '{cueListName}' after the deletion request.")
+    {
+    }
 }

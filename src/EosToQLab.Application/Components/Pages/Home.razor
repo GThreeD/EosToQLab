@@ -9,7 +9,8 @@
     <div>
         <div class="eyebrow">Import workflow</div>
         <h1>Build a protected QLab cue list from EOS</h1>
-        <p>Drop an EOS CSV or ESF3D file, review the parsed cues, and import them into a workspace that is already open in QLab 5.</p>
+        <p>Drop an EOS CSV or ESF3D file, review the parsed cues, and import them into a workspace that is already open
+            in QLab 5.</p>
     </div>
     <div class="status-pill @(_busy ? "working" : "ready")">
         @(_busy ? "Working…" : "Ready")
@@ -39,7 +40,7 @@
         </div>
 
         <label class="drop-zone @(_busy ? "disabled" : string.Empty)">
-            <InputFile OnChange="LoadSourceAsync" accept=".csv,.esf3d" disabled="@_busy" />
+            <InputFile OnChange="LoadSourceAsync" accept=".csv,.esf3d" disabled="@_busy"/>
             <span class="drop-icon">⇩</span>
             <strong>Drop a file here or click to choose</strong>
             <span>Accepted: .csv, .esf3d</span>
@@ -88,7 +89,7 @@
 
         <label class="field">
             <span>OSC passcode (optional)</span>
-            <input type="password" @bind="_passcode" disabled="@_busy" autocomplete="off" />
+            <input type="password" @bind="_passcode" disabled="@_busy" autocomplete="off"/>
         </label>
     </section>
 </div>
@@ -98,18 +99,19 @@
         <span class="step-number">3</span>
         <div>
             <h2>Import options</h2>
-            <p>A temporary cue list is populated first. Existing lists remain untouched unless replacement is explicitly confirmed.</p>
+            <p>A temporary cue list is populated first. Existing lists remain untouched unless replacement is explicitly
+                confirmed.</p>
         </div>
     </div>
 
     <div class="form-grid">
         <label class="field">
             <span>New cue list name</span>
-            <input @bind="CueListName" disabled="@_busy" />
+            <input @bind="CueListName" disabled="@_busy"/>
         </label>
         <label class="field">
             <span>QLab network patch name</span>
-            <input @bind="_networkPatchName" disabled="@_busy" />
+            <input @bind="_networkPatchName" disabled="@_busy"/>
         </label>
         <label class="field">
             <span>Scene text</span>
@@ -117,22 +119,27 @@
                 <option value="@SceneTextImportMode.Ignore">Ignore</option>
                 <option value="@SceneTextImportMode.MemoCue">Create memo cues</option>
             </select>
-            <small>Memo cues remain unnumbered. Network cues receive exactly the EOS cue number when that number is available in QLab.</small>
+            <small>Memo cues remain unnumbered. Network cues receive exactly the EOS cue number when that number is
+                available in QLab.</small>
         </label>
     </div>
 
     <div class="checks">
-        <label><input type="checkbox" @bind="_skipCueAfterFollowOrHang" disabled="@_busy" /> Skip the cue immediately following an EOS follow/hang cue</label>
-        <label><input type="checkbox" @bind="_saveWorkspace" disabled="@_busy" /> Save the QLab workspace after a successful import</label>
+        <label><input type="checkbox" @bind="_skipCueAfterFollowOrHang" disabled="@_busy"/> Skip the cue immediately
+            following an EOS follow/hang cue</label>
+        <label><input type="checkbox" @bind="_saveWorkspace" disabled="@_busy"/> Save the QLab workspace after a
+            successful import</label>
     </div>
 
     @if (_conflictDetected)
     {
         <div class="conflict-box">
             <strong>A cue list named “@_cueListName” already exists.</strong>
-            <p>Replacement deletes only that matching list after the new temporary list has been built successfully. Network cue numbers are assigned afterwards, so they can reuse the EOS numbers released by the replaced list; numbers still used elsewhere remain blank.</p>
+            <p>Replacement deletes only that matching list after the new temporary list has been built successfully.
+                Network cue numbers are assigned afterwards, so they can reuse the EOS numbers released by the replaced
+                list; numbers still used elsewhere remain blank.</p>
             <label>
-                <input type="checkbox" @bind="_replacementConsent" disabled="@_busy" />
+                <input type="checkbox" @bind="_replacementConsent" disabled="@_busy"/>
                 I explicitly approve replacing the existing cue list.
             </label>
         </div>
@@ -170,27 +177,27 @@
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>EOS cue</th>
-                        <th>Label</th>
-                        <th>Notes</th>
-                        <th>Scene</th>
-                        <th>Follow/Hang</th>
-                    </tr>
+                <tr>
+                    <th>#</th>
+                    <th>EOS cue</th>
+                    <th>Label</th>
+                    <th>Notes</th>
+                    <th>Scene</th>
+                    <th>Follow/Hang</th>
+                </tr>
                 </thead>
                 <tbody>
-                    @foreach (var cue in _source.Cues.Take(500))
-                    {
-                        <tr>
-                            <td>@(cue.SourceOrder + 1)</td>
-                            <td><strong>@cue.DisplayCueNumber</strong></td>
-                            <td>@(cue.Label ?? "—")</td>
-                            <td>@(cue.CueNotes ?? "—")</td>
-                            <td>@(cue.SceneText ?? "—")</td>
-                            <td>@(cue.Follow ?? "—")</td>
-                        </tr>
-                    }
+                @foreach (var cue in _source.Cues.Take(500))
+                {
+                    <tr>
+                        <td>@(cue.SourceOrder + 1)</td>
+                        <td><strong>@cue.DisplayCueNumber</strong></td>
+                        <td>@(cue.Label ?? "—")</td>
+                        <td>@(cue.CueNotes ?? "—")</td>
+                        <td>@(cue.SceneText ?? "—")</td>
+                        <td>@(cue.Follow ?? "—")</td>
+                    </tr>
+                }
                 </tbody>
             </table>
         </div>
@@ -250,11 +257,11 @@
     }
 
     private bool CanImport => !_busy
-        && _source is { Cues.Count: > 0 }
-        && !string.IsNullOrWhiteSpace(_selectedWorkspaceId)
-        && !string.IsNullOrWhiteSpace(_cueListName)
-        && !string.IsNullOrWhiteSpace(_networkPatchName)
-        && (!_conflictDetected || _replacementConsent);
+                              && _source is { Cues.Count: > 0 }
+                              && !string.IsNullOrWhiteSpace(_selectedWorkspaceId)
+                              && !string.IsNullOrWhiteSpace(_cueListName)
+                              && !string.IsNullOrWhiteSpace(_networkPatchName)
+                              && (!_conflictDetected || _replacementConsent);
 
     protected override async Task OnInitializedAsync()
     {
@@ -379,6 +386,10 @@
         _replacementConsent = false;
     }
 
-    private static string? NullIfWhiteSpace(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? NullIfWhiteSpace(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+
 }

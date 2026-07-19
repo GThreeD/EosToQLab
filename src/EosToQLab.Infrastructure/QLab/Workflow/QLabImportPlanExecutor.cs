@@ -16,10 +16,8 @@ public sealed class QLabImportPlanExecutor
             .GroupBy(mapper => mapper.PlanItemType)
             .FirstOrDefault(group => group.Count() > 1);
         if (duplicate is not null)
-        {
             throw new InvalidOperationException(
                 $"Multiple QLab plan-item mappers are registered for {duplicate.Key.Name}.");
-        }
 
         _mappers = mapperList.ToDictionary(mapper => mapper.PlanItemType);
     }
@@ -41,19 +39,14 @@ public sealed class QLabImportPlanExecutor
             cancellationToken.ThrowIfCancellationRequested();
 
             if (!_mappers.TryGetValue(item.GetType(), out var mapper))
-            {
                 throw new QLabUnsupportedPlanItemException(item.GetType().Name);
-            }
 
             var request = mapper.Map(item, context);
             var pendingCueNumber = await ExecuteCueRequestAsync(
                 session,
                 request,
                 cancellationToken);
-            if (pendingCueNumber is not null)
-            {
-                pendingCueNumbers.Add(pendingCueNumber);
-            }
+            if (pendingCueNumber is not null) pendingCueNumbers.Add(pendingCueNumber);
         }
 
         return new QLabPlanExecutionResult(pendingCueNumbers);
@@ -96,10 +89,7 @@ public sealed class QLabImportPlanExecutor
         {
             // Keep the workflow rollback boundary directly after cue-list deletion.
             // Undo only number assignments that succeeded before the fatal failure.
-            for (var index = 0; index < successfulAssignments; index++)
-            {
-                await session.UndoAsync(CancellationToken.None);
-            }
+            for (var index = 0; index < successfulAssignments; index++) await session.UndoAsync(CancellationToken.None);
 
             throw;
         }
@@ -126,22 +116,18 @@ public sealed class QLabImportPlanExecutor
                 cancellationToken);
 
             foreach (var assignment in request.CueProperties)
-            {
                 await session.SetCuePropertyAsync(
                     cueId,
                     assignment.Property,
                     assignment.Value,
                     cancellationToken);
-            }
 
             foreach (var assignment in request.NetworkParameters)
-            {
                 await session.SetNetworkParameterAsync(
                     cueId,
                     assignment.Parameter,
                     assignment.Value,
                     cancellationToken);
-            }
 
             if (request.ExpectedNetworkPatch is not null)
             {
@@ -153,11 +139,9 @@ public sealed class QLabImportPlanExecutor
                         appliedPatchId,
                         request.ExpectedNetworkPatch.Id,
                         StringComparison.OrdinalIgnoreCase))
-                {
                     throw new QLabNetworkPatchAssignmentException(
                         request.Name,
                         request.ExpectedNetworkPatch.Name);
-                }
             }
 
             return string.IsNullOrWhiteSpace(request.DesiredCueNumber)

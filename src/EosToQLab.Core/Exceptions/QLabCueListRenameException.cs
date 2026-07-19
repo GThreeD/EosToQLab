@@ -6,5 +6,7 @@ public sealed class QLabCueListRenameException : EosToQLabException
         : base(
             "QLAB_CUE_LIST_RENAME_FAILED",
             $"The QLab cue list '{cueListName}' could not be renamed to '{targetName}'.",
-            innerException) { }
+            innerException)
+    {
+    }
 }

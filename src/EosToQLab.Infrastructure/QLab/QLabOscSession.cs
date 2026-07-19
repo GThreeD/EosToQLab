@@ -43,12 +43,14 @@ public sealed class QLabOscSession : IQLabOscSession
             QLabProtocol.WorkspaceCommands.NetworkPatchList,
             cancellationToken);
         return QLabJsonParser.ParseNetworkPatches(reply.Data)
-            .FirstOrDefault(patch => patch.Name.Contains(patchName, StringComparison.Ordinal))
-            ?? throw new QLabNetworkPatchNotFoundException(patchName);
+                   .FirstOrDefault(patch => patch.Name.Contains(patchName, StringComparison.Ordinal))
+               ?? throw new QLabNetworkPatchNotFoundException(patchName);
     }
 
-    public Task<string?> GetCurrentCueListIdAsync(CancellationToken cancellationToken = default) =>
-        QueryWorkspacePropertyAsync(QLabWorkspaceProperty.CurrentCueListId, cancellationToken);
+    public Task<string?> GetCurrentCueListIdAsync(CancellationToken cancellationToken = default)
+    {
+        return QueryWorkspacePropertyAsync(QLabWorkspaceProperty.CurrentCueListId, cancellationToken);
+    }
 
     public async Task<string> CreateCueAsync(
         QLabCueType cueType,
@@ -63,9 +65,7 @@ public sealed class QLabOscSession : IQLabOscSession
                 QLabProtocol.CueTypeName(cueType));
             var cueId = QLabJsonParser.GetString(reply.Data);
             if (string.IsNullOrWhiteSpace(cueId))
-            {
                 throw new QLabUnexpectedReplyException(reply.Address, reply.Root.GetRawText());
-            }
 
             return cueId;
         }
@@ -75,10 +75,7 @@ public sealed class QLabOscSession : IQLabOscSession
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            if (cueType == QLabCueType.CueList)
-            {
-                throw new QLabCueListCreationException(cueName, exception);
-            }
+            if (cueType == QLabCueType.CueList) throw new QLabCueListCreationException(cueName, exception);
 
             throw new QLabCueCreationException(cueName, exception);
         }
@@ -114,23 +111,27 @@ public sealed class QLabOscSession : IQLabOscSession
         string cueId,
         QLabNetworkParameter parameter,
         string value,
-        CancellationToken cancellationToken = default) =>
-        SetCuePropertyByProtocolNameAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return SetCuePropertyByProtocolNameAsync(
             cueId,
             QLabProtocol.NetworkParameterProperty(parameter),
             value,
             cancellationToken);
+    }
 
     public Task<string?> QueryCuePropertyAsync(
         string cueId,
         QLabCueProperty cueProperty,
-        CancellationToken cancellationToken = default) =>
-        QueryStringAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return QueryStringAsync(
             QLabProtocol.Addresses.Cue(
                 Workspace.Id,
                 cueId,
                 QLabProtocol.CuePropertyName(cueProperty)),
             cancellationToken);
+    }
 
     public async Task RenameCueListAsync(
         string cueListId,
@@ -150,9 +151,7 @@ public sealed class QLabOscSession : IQLabOscSession
                 QLabCueProperty.Name,
                 cancellationToken);
             if (!string.Equals(appliedName, targetName, StringComparison.Ordinal))
-            {
                 throw new QLabCueListRenameVerificationException(targetName, appliedName);
-            }
         }
         catch (QLabCueListRenameVerificationException)
         {
@@ -177,9 +176,7 @@ public sealed class QLabOscSession : IQLabOscSession
             var remainingCueLists = await GetCueListsAsync(cancellationToken);
             if (remainingCueLists.Any(list =>
                     string.Equals(list.Id, cueListId, StringComparison.OrdinalIgnoreCase)))
-            {
                 throw new QLabCueListDeletionVerificationException(cueListName);
-            }
         }
         catch (QLabCueListDeletionVerificationException)
         {
@@ -212,16 +209,21 @@ public sealed class QLabOscSession : IQLabOscSession
             cancellationToken);
     }
 
-    public ValueTask DisposeAsync() => _transport.DisposeAsync();
+    public ValueTask DisposeAsync()
+    {
+        return _transport.DisposeAsync();
+    }
 
     private Task<string?> QueryWorkspacePropertyAsync(
         QLabWorkspaceProperty property,
-        CancellationToken cancellationToken) =>
-        QueryStringAsync(
+        CancellationToken cancellationToken)
+    {
+        return QueryStringAsync(
             QLabProtocol.Addresses.Workspace(
                 Workspace.Id,
                 QLabProtocol.WorkspacePropertyName(property)),
             cancellationToken);
+    }
 
     private async Task SetCuePropertyByProtocolNameAsync(
         string cueId,
@@ -246,11 +248,13 @@ public sealed class QLabOscSession : IQLabOscSession
     private Task<QLabOscReply> SendWorkspaceCommandAsync(
         string command,
         CancellationToken cancellationToken,
-        params object?[] arguments) =>
-        SendAsync(
+        params object?[] arguments)
+    {
+        return SendAsync(
             QLabProtocol.Addresses.Workspace(Workspace.Id, command),
             cancellationToken,
             arguments);
+    }
 
     private async Task<QLabOscReply> SendAsync(
         string address,

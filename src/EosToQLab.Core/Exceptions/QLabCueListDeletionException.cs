@@ -6,5 +6,7 @@ public sealed class QLabCueListDeletionException : EosToQLabException
         : base(
             "QLAB_CUE_LIST_DELETION_FAILED",
             $"The QLab cue list '{cueListName}' could not be deleted.",
-            innerException) { }
+            innerException)
+    {
+    }
 }

@@ -45,8 +45,10 @@ dotnet build src/EosToQLab.App/EosToQLab.App.csproj \
 3. Add an ETC Eos family Network Patch named `Eos`.
 4. Add an existing cue list named `Protected List` with a recognizable cue.
 5. Import with final name `New Light Cues`. Confirm that `Protected List` is unchanged.
-6. Attempt another import with final name `Protected List`. Confirm that the service rejects it before creating a replacement unless explicit consent is selected.
-7. Approve replacement in a disposable copy of the workspace. Confirm that the old list remains until the new temporary list is fully populated.
+6. Attempt another import with final name `Protected List`. Confirm that the service rejects it before creating a
+   replacement unless explicit consent is selected.
+7. Approve replacement in a disposable copy of the workspace. Confirm that the old list remains until the new temporary
+   list is fully populated.
 8. Check Memo cues, Network-cue names, patch assignment, and parameter values.
 9. Test with an incorrect OSC passcode and verify `QLabAccessDeniedException`.
 10. Test without an open workspace and verify `QLabNoOpenWorkspaceException`.

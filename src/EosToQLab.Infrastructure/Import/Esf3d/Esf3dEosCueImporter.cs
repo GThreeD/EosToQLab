@@ -16,8 +16,10 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
 
     public EosSourceKind SourceKind => EosSourceKind.Esf3d;
 
-    public bool CanImport(string fileName) =>
-        string.Equals(Path.GetExtension(fileName), ".esf3d", StringComparison.OrdinalIgnoreCase);
+    public bool CanImport(string fileName)
+    {
+        return string.Equals(Path.GetExtension(fileName), ".esf3d", StringComparison.OrdinalIgnoreCase);
+    }
 
     public async Task<EosImportResult> ImportAsync(
         EosImportRequest request,
@@ -32,9 +34,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         };
 
         foreach (var cue in recovered.Where(cue => cue.FollowDecodeFailed))
-        {
             diagnostics.Add(new Esf3dFollowNotDecodedWarning(FormatCueNumber(cue.RawCueNumber)));
-        }
 
         if (recovered.Count == 0)
         {
@@ -73,16 +73,13 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
     {
         try
         {
-            using var archive = new ZipArchive(request.Content, ZipArchiveMode.Read, leaveOpen: true);
+            using var archive = new ZipArchive(request.Content, ZipArchiveMode.Read, true);
             var entry = archive.Entries
                 .Where(candidate => candidate.FullName.EndsWith("showdat.dat", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(candidate => candidate.FullName.Count(character => character == '/'))
                 .FirstOrDefault();
 
-            if (entry is null)
-            {
-                throw new ShowDataEntryMissingException(request.FileName);
-            }
+            if (entry is null) throw new ShowDataEntryMissingException(request.FileName);
 
             await using var input = entry.Open();
             using var buffer = new MemoryStream(entry.Length > int.MaxValue ? 0 : (int)entry.Length);
@@ -108,23 +105,14 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         var candidates = new List<TextField>();
         for (var offset = 0; offset <= data.Length - 3; offset++)
         {
-            if (data[offset] != TextTag)
-            {
-                continue;
-            }
+            if (data[offset] != TextTag) continue;
 
             var characterCount = data[offset + 1] | (data[offset + 2] << 8);
-            if (characterCount is < 1 or > 65_535 || characterCount > maxCharacters)
-            {
-                continue;
-            }
+            if (characterCount is < 1 or > 65_535 || characterCount > maxCharacters) continue;
 
             var byteLength = 3 + characterCount * 2;
             var end = offset + byteLength;
-            if (end > data.Length)
-            {
-                continue;
-            }
+            if (end > data.Length) continue;
 
             string text;
             try
@@ -137,10 +125,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
                 continue;
             }
 
-            if (PrintableRatio(text) < 0.88)
-            {
-                continue;
-            }
+            if (PrintableRatio(text) < 0.88) continue;
 
             candidates.Add(new TextField(offset, byteLength, text, ConfidenceForText(text)));
         }
@@ -151,10 +136,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
                      .OrderByDescending(candidate => candidate.Confidence == TextConfidence.High)
                      .ThenByDescending(candidate => candidate.ByteLength))
         {
-            if (intervals.Any(interval => field.Offset < interval.End && field.End > interval.Start))
-            {
-                continue;
-            }
+            if (intervals.Any(interval => field.Offset < interval.End && field.End > interval.Start)) continue;
 
             accepted.Add(field);
             intervals.Add((field.Offset, field.End));
@@ -167,10 +149,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
     {
         var allCandidates = CueNumberCandidates(data);
         var run = SelectMainCueRun(allCandidates);
-        if (run.Count == 0)
-        {
-            return [];
-        }
+        if (run.Count == 0) return [];
 
         var recovered = new List<RecoveredCue>();
         for (var index = 0; index < run.Count; index++)
@@ -192,8 +171,8 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
 
             var recordFields = fields
                 .Where(field => field.Offset >= recordStart
-                    && field.Offset < recordEnd
-                    && IsUsefulRecordText(field.Text))
+                                && field.Offset < recordEnd
+                                && IsUsefulRecordText(field.Text))
                 .ToArray();
             var cueLabel = recordFields.FirstOrDefault(field => field.Offset == number.End);
             var header = Esf3dCueHeaderDecoder.Decode(data, number.End, recordEnd);
@@ -216,22 +195,10 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
                     : null;
 
             var excludedOffsets = new HashSet<int>();
-            if (cueLabel is not null)
-            {
-                excludedOffsets.Add(cueLabel.Offset);
-            }
-            if (sceneLabel is not null)
-            {
-                excludedOffsets.Add(sceneLabel.Offset);
-            }
-            if (cueNotes is not null)
-            {
-                excludedOffsets.Add(cueNotes.Offset);
-            }
-            if (header.FollowTextOffset is int followTextOffset)
-            {
-                excludedOffsets.Add(followTextOffset);
-            }
+            if (cueLabel is not null) excludedOffsets.Add(cueLabel.Offset);
+            if (sceneLabel is not null) excludedOffsets.Add(sceneLabel.Offset);
+            if (cueNotes is not null) excludedOffsets.Add(cueNotes.Offset);
+            if (header.FollowTextOffset is int followTextOffset) excludedOffsets.Add(followTextOffset);
 
             recovered.Add(new RecoveredCue(
                 number.RawValue,
@@ -256,17 +223,12 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         while (position <= data.Length - CueMarker.Length)
         {
             var markerOffset = FindPattern(data, CueMarker, position);
-            if (markerOffset < 0)
-            {
-                break;
-            }
+            if (markerOffset < 0) break;
 
             var numberOffset = markerOffset + CueMarker.Length;
             if (TryDecodeTaggedUnsigned(data, numberOffset, out var rawValue, out var end)
                 && rawValue is >= CueScale and <= 99_999_999)
-            {
                 result.Add(new NumberCandidate(numberOffset, rawValue, end));
-            }
 
             position = markerOffset + 1;
         }
@@ -274,22 +236,21 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         return result;
     }
 
-    private static List<NumberCandidate> SelectMainCueRun(List<NumberCandidate> candidates) =>
-        SplitMonotonicRuns(candidates)
+    private static List<NumberCandidate> SelectMainCueRun(List<NumberCandidate> candidates)
+    {
+        return SplitMonotonicRuns(candidates)
             .Where(run => run.Count >= 2
-                && run[0].RawValue <= 100 * CueScale
-                && run.All(item => item.RawValue % 10 == 0))
+                          && run[0].RawValue <= 100 * CueScale
+                          && run.All(item => item.RawValue % 10 == 0))
             .OrderByDescending(run => run.Count)
             .ThenByDescending(run => run[^1].Offset - run[0].Offset)
             .FirstOrDefault() ?? [];
+    }
 
     private static IEnumerable<List<NumberCandidate>> SplitMonotonicRuns(
         IReadOnlyList<NumberCandidate> candidates)
     {
-        if (candidates.Count == 0)
-        {
-            yield break;
-        }
+        if (candidates.Count == 0) yield break;
 
         var current = new List<NumberCandidate> { candidates[0] };
         for (var index = 1; index < candidates.Count; index++)
@@ -315,10 +276,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
     {
         value = 0;
         end = offset;
-        if (offset >= data.Length)
-        {
-            return false;
-        }
+        if (offset >= data.Length) return false;
 
         var width = data[offset] switch
         {
@@ -327,15 +285,9 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
             0x0A => 3,
             _ => 0
         };
-        if (width == 0 || offset + 1 + width > data.Length)
-        {
-            return false;
-        }
+        if (width == 0 || offset + 1 + width > data.Length) return false;
 
-        for (var index = 0; index < width; index++)
-        {
-            value |= data[offset + 1 + index] << (8 * index);
-        }
+        for (var index = 0; index < width; index++) value |= data[offset + 1 + index] << (8 * index);
 
         end = offset + 1 + width;
         return true;
@@ -348,19 +300,13 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
             var matches = true;
             for (var index = 0; index < pattern.Length; index++)
             {
-                if (data[offset + index] == pattern[index])
-                {
-                    continue;
-                }
+                if (data[offset + index] == pattern[index]) continue;
 
                 matches = false;
                 break;
             }
 
-            if (matches)
-            {
-                return offset;
-            }
+            if (matches) return offset;
         }
 
         return -1;
@@ -369,10 +315,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
     private static bool IsUsefulRecordText(string text)
     {
         var trimmed = text.Trim();
-        if (trimmed.Length is 0 or > 120 || Guid.TryParse(trimmed.TrimStart('$'), out _))
-        {
-            return false;
-        }
+        if (trimmed.Length is 0 or > 120 || Guid.TryParse(trimmed.TrimStart('$'), out _)) return false;
 
         return trimmed.Length != 1 || char.IsLetterOrDigit(trimmed[0]);
     }
@@ -380,37 +323,34 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
     private static double PrintableRatio(string text)
     {
         var runes = text.EnumerateRunes().ToArray();
-        if (runes.Length == 0)
-        {
-            return 0;
-        }
+        if (runes.Length == 0) return 0;
 
         var good = runes.Count(rune =>
         {
             var category = Rune.GetUnicodeCategory(rune);
             return rune.Value is '\t' or '\r' or '\n'
-                || category is UnicodeCategory.UppercaseLetter
-                    or UnicodeCategory.LowercaseLetter
-                    or UnicodeCategory.TitlecaseLetter
-                    or UnicodeCategory.ModifierLetter
-                    or UnicodeCategory.OtherLetter
-                    or UnicodeCategory.DecimalDigitNumber
-                    or UnicodeCategory.LetterNumber
-                    or UnicodeCategory.OtherNumber
-                    or UnicodeCategory.ConnectorPunctuation
-                    or UnicodeCategory.DashPunctuation
-                    or UnicodeCategory.OpenPunctuation
-                    or UnicodeCategory.ClosePunctuation
-                    or UnicodeCategory.InitialQuotePunctuation
-                    or UnicodeCategory.FinalQuotePunctuation
-                    or UnicodeCategory.OtherPunctuation
-                    or UnicodeCategory.MathSymbol
-                    or UnicodeCategory.CurrencySymbol
-                    or UnicodeCategory.ModifierSymbol
-                    or UnicodeCategory.OtherSymbol
-                    or UnicodeCategory.SpaceSeparator
-                    or UnicodeCategory.LineSeparator
-                    or UnicodeCategory.ParagraphSeparator;
+                   || category is UnicodeCategory.UppercaseLetter
+                       or UnicodeCategory.LowercaseLetter
+                       or UnicodeCategory.TitlecaseLetter
+                       or UnicodeCategory.ModifierLetter
+                       or UnicodeCategory.OtherLetter
+                       or UnicodeCategory.DecimalDigitNumber
+                       or UnicodeCategory.LetterNumber
+                       or UnicodeCategory.OtherNumber
+                       or UnicodeCategory.ConnectorPunctuation
+                       or UnicodeCategory.DashPunctuation
+                       or UnicodeCategory.OpenPunctuation
+                       or UnicodeCategory.ClosePunctuation
+                       or UnicodeCategory.InitialQuotePunctuation
+                       or UnicodeCategory.FinalQuotePunctuation
+                       or UnicodeCategory.OtherPunctuation
+                       or UnicodeCategory.MathSymbol
+                       or UnicodeCategory.CurrencySymbol
+                       or UnicodeCategory.ModifierSymbol
+                       or UnicodeCategory.OtherSymbol
+                       or UnicodeCategory.SpaceSeparator
+                       or UnicodeCategory.LineSeparator
+                       or UnicodeCategory.ParagraphSeparator;
         });
 
         return (double)good / runes.Length;
@@ -422,26 +362,35 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         var asciiCount = runes.Count(rune => rune.Value is '\t' or '\r' or '\n' || rune.Value is >= 0x20 and <= 0x7E);
         var asciiRatio = (double)asciiCount / Math.Max(runes.Length, 1);
         var printable = PrintableRatio(text);
-        if (printable >= 0.98 && asciiRatio >= 0.90)
-        {
-            return TextConfidence.High;
-        }
+        if (printable >= 0.98 && asciiRatio >= 0.90) return TextConfidence.High;
 
         return printable >= 0.95 ? TextConfidence.Medium : TextConfidence.Low;
     }
 
-    private static string FormatCueNumber(int rawValue) =>
-        ((decimal)rawValue / CueScale).ToString("0.####", CultureInfo.InvariantCulture);
+    private static string FormatCueNumber(int rawValue)
+    {
+        return ((decimal)rawValue / CueScale).ToString("0.####", CultureInfo.InvariantCulture);
+    }
 
-    private static string? NullIfWhiteSpace(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? NullIfWhiteSpace(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
 
-    private enum TextConfidence { Low, Medium, High }
+    private enum TextConfidence
+    {
+        Low,
+        Medium,
+        High
+    }
+
     private sealed record TextField(int Offset, int ByteLength, string Text, TextConfidence Confidence)
     {
         public int End => Offset + ByteLength;
     }
+
     private sealed record NumberCandidate(int Offset, int RawValue, int End);
+
     private sealed record RecoveredCue(
         int RawCueNumber,
         string? CueLabel,

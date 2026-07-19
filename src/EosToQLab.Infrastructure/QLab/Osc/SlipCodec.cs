@@ -14,7 +14,6 @@ internal static class SlipCodec
         using var stream = new MemoryStream(payload.Length + 4);
         stream.WriteByte(End);
         foreach (var value in payload)
-        {
             switch (value)
             {
                 case End:
@@ -29,7 +28,7 @@ internal static class SlipCodec
                     stream.WriteByte(value);
                     break;
             }
-        }
+
         stream.WriteByte(End);
         stream.WriteByte(End);
         return stream.ToArray();
@@ -45,10 +44,7 @@ internal static class SlipCodec
         while (true)
         {
             var read = await stream.ReadAsync(buffer, cancellationToken);
-            if (read == 0)
-            {
-                throw new QLabConnectionClosedException();
-            }
+            if (read == 0) throw new QLabConnectionClosedException();
 
             var value = buffer[0];
             if (value == End)
@@ -60,6 +56,7 @@ internal static class SlipCodec
                     payload.Clear();
                     continue;
                 }
+
                 return payload.ToArray();
             }
 

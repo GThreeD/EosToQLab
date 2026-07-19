@@ -15,9 +15,7 @@ public sealed class QLabNetworkCuePlanMapper : QLabPlanItemMapper<QLabNetworkCue
         };
 
         if (!string.IsNullOrWhiteSpace(item.Notes))
-        {
             properties.Add(new QLabCuePropertyAssignment(QLabCueProperty.Notes, item.Notes));
-        }
 
         return new QLabCueCreationRequest(
             QLabCueType.Network,

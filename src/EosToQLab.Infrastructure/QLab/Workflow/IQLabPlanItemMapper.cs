@@ -24,11 +24,9 @@ public abstract class QLabPlanItemMapper<TPlanItem> : IQLabPlanItemMapper
         ArgumentNullException.ThrowIfNull(context);
 
         if (item is not TPlanItem typedItem)
-        {
             throw new ArgumentException(
                 $"Mapper for {typeof(TPlanItem).Name} cannot map {item.GetType().Name}.",
                 nameof(item));
-        }
 
         return Map(typedItem, context);
     }

@@ -11,6 +11,7 @@ public sealed record EosCue
     public string? CueNotes { get; init; }
     public string? SceneText { get; init; }
     public EosSourceKind SourceKind { get; init; }
+
     public IReadOnlyDictionary<string, string?> AdditionalValues { get; init; } =
         new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
@@ -22,8 +23,8 @@ public sealed record EosCue
         {
             var value = Follow?.Trim();
             return !string.IsNullOrEmpty(value)
-                && (value.StartsWith('F') || value.StartsWith('f')
-                    || value.StartsWith('H') || value.StartsWith('h'));
+                   && (value.StartsWith('F') || value.StartsWith('f')
+                                             || value.StartsWith('H') || value.StartsWith('h'));
         }
     }
 }

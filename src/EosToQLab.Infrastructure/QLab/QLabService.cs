@@ -9,8 +9,10 @@ public sealed class QLabService(
     QLabImportWorkflow importWorkflow) : IQLabService
 {
     public Task<IReadOnlyList<QLabWorkspace>> GetOpenWorkspacesAsync(
-        CancellationToken cancellationToken = default) =>
-        oscService.GetOpenWorkspacesAsync(cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        return oscService.GetOpenWorkspacesAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyList<QLabCueList>> GetCueListsAsync(
         string workspaceId,
@@ -27,6 +29,8 @@ public sealed class QLabService(
     public Task<QLabImportResult> ImportAsync(
         IReadOnlyList<EosCue> cues,
         QLabImportOptions options,
-        CancellationToken cancellationToken = default) =>
-        importWorkflow.ExecuteAsync(cues, options, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        return importWorkflow.ExecuteAsync(cues, options, cancellationToken);
+    }
 }

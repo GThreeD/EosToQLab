@@ -17,24 +17,15 @@ internal static class QLabJsonParser
 
     internal static IReadOnlyList<QLabWorkspace> ParseWorkspaces(JsonElement data)
     {
-        if (data.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
+        if (data.ValueKind != JsonValueKind.Array) return [];
 
         var result = new List<QLabWorkspace>();
         foreach (var item in data.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.Object)
-            {
-                continue;
-            }
+            if (item.ValueKind != JsonValueKind.Object) continue;
 
             var id = GetPropertyString(item, WorkspaceIdFields);
-            if (string.IsNullOrWhiteSpace(id))
-            {
-                continue;
-            }
+            if (string.IsNullOrWhiteSpace(id)) continue;
 
             var name = GetPropertyString(item, WorkspaceNameFields) ?? id;
             var path = GetPropertyString(item, WorkspacePathFields);
@@ -46,24 +37,15 @@ internal static class QLabJsonParser
 
     internal static IReadOnlyList<QLabCueList> ParseCueLists(JsonElement data)
     {
-        if (data.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
+        if (data.ValueKind != JsonValueKind.Array) return [];
 
         var result = new List<QLabCueList>();
         foreach (var item in data.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.Object)
-            {
-                continue;
-            }
+            if (item.ValueKind != JsonValueKind.Object) continue;
 
             var id = GetPropertyString(item, CueIdFields);
-            if (string.IsNullOrWhiteSpace(id))
-            {
-                continue;
-            }
+            if (string.IsNullOrWhiteSpace(id)) continue;
 
             result.Add(new QLabCueList(
                 id,
@@ -78,45 +60,34 @@ internal static class QLabJsonParser
     {
         var result = new List<QLabNetworkPatch>();
         if (data.ValueKind == JsonValueKind.Array)
-        {
             foreach (var item in data.EnumerateArray())
-            {
                 AddPatch(result, item, null);
-            }
-        }
         else if (data.ValueKind == JsonValueKind.Object)
-        {
             foreach (var property in data.EnumerateObject())
-            {
                 AddPatch(result, property.Value, property.Name);
-            }
-        }
 
         return result;
     }
 
-    internal static string? GetString(JsonElement value) => value.ValueKind switch
+    internal static string? GetString(JsonElement value)
     {
-        JsonValueKind.String => value.GetString(),
-        JsonValueKind.Number => value.GetRawText(),
-        JsonValueKind.True => "true",
-        JsonValueKind.False => "false",
-        _ => null
-    };
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            _ => null
+        };
+    }
 
     private static void AddPatch(ICollection<QLabNetworkPatch> result, JsonElement item, string? fallbackId)
     {
-        if (item.ValueKind != JsonValueKind.Object)
-        {
-            return;
-        }
+        if (item.ValueKind != JsonValueKind.Object) return;
 
         var id = GetPropertyString(item, PatchIdFields) ?? fallbackId;
         var name = GetPropertyString(item, PatchNameFields);
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(name))
-        {
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(name)) return;
 
         result.Add(new QLabNetworkPatch(
             id,
@@ -127,16 +98,11 @@ internal static class QLabJsonParser
     private static string? GetPropertyString(JsonElement element, IEnumerable<string> names)
     {
         foreach (var name in names)
-        {
             if (element.TryGetProperty(name, out var value))
             {
                 var result = GetString(value);
-                if (result is not null)
-                {
-                    return result;
-                }
+                if (result is not null) return result;
             }
-        }
 
         return null;
     }

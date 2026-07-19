@@ -6,5 +6,7 @@ public sealed class QLabTransportException : EosToQLabException
         : base(
             "QLAB_TRANSPORT_FAILED",
             $"The QLab TCP connection failed while sending '{address}'.",
-            innerException) { }
+            innerException)
+    {
+    }
 }

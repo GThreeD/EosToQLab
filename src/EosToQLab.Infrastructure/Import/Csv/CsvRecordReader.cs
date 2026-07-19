@@ -47,10 +47,7 @@ internal static class CsvRecordReader
                     field.Clear();
                     break;
                 case '\r':
-                    if (index + 1 < text.Length && text[index + 1] == '\n')
-                    {
-                        index++;
-                    }
+                    if (index + 1 < text.Length && text[index + 1] == '\n') index++;
                     CompleteRow(records, row, field);
                     break;
                 case '\n':
@@ -62,15 +59,9 @@ internal static class CsvRecordReader
             }
         }
 
-        if (quoted)
-        {
-            throw new CsvUnterminatedQuotedFieldException();
-        }
+        if (quoted) throw new CsvUnterminatedQuotedFieldException();
 
-        if (field.Length > 0 || row.Count > 0)
-        {
-            CompleteRow(records, row, field);
-        }
+        if (field.Length > 0 || row.Count > 0) CompleteRow(records, row, field);
 
         return records;
     }

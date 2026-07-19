@@ -7,7 +7,9 @@ public sealed class EosCueImporterFactory(IEnumerable<IEosCueImporter> importers
 {
     private readonly IReadOnlyList<IEosCueImporter> _importers = importers.ToArray();
 
-    public IEosCueImporter CreateFor(string fileName) =>
-        _importers.FirstOrDefault(importer => importer.CanImport(fileName))
-        ?? throw new UnsupportedEosImportFormatException(fileName);
+    public IEosCueImporter CreateFor(string fileName)
+    {
+        return _importers.FirstOrDefault(importer => importer.CanImport(fileName))
+               ?? throw new UnsupportedEosImportFormatException(fileName);
+    }
 }

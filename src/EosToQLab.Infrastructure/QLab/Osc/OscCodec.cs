@@ -11,15 +11,9 @@ internal static class OscCodec
         using var stream = new MemoryStream();
         WritePaddedString(stream, message.Address);
         var tags = new StringBuilder(",");
-        foreach (var argument in message.Arguments)
-        {
-            AppendTypeTag(tags, argument);
-        }
+        foreach (var argument in message.Arguments) AppendTypeTag(tags, argument);
         WritePaddedString(stream, tags.ToString());
-        foreach (var argument in message.Arguments)
-        {
-            WriteArgument(stream, argument);
-        }
+        foreach (var argument in message.Arguments) WriteArgument(stream, argument);
         return stream.ToArray();
     }
 
@@ -29,12 +23,10 @@ internal static class OscCodec
         var address = ReadPaddedString(data, ref offset);
         var typeTags = ReadPaddedString(data, ref offset);
         if (!typeTags.StartsWith(','))
-        {
             throw new QLabOscPacketException("The OSC type tag string does not start with a comma.");
-        }
 
         var tagIndex = 1;
-        var arguments = ReadArguments(data, ref offset, typeTags, ref tagIndex, stopAtArrayEnd: false);
+        var arguments = ReadArguments(data, ref offset, typeTags, ref tagIndex, false);
         return new OscMessage(address, arguments);
     }
 
@@ -52,16 +44,15 @@ internal static class OscCodec
             if (tag == ']')
             {
                 if (!stopAtArrayEnd)
-                {
-                    throw new QLabOscPacketException("The OSC type tag string contains an unexpected array terminator.");
-                }
+                    throw new QLabOscPacketException(
+                        "The OSC type tag string contains an unexpected array terminator.");
                 return values;
             }
 
             switch (tag)
             {
                 case '[':
-                    values.Add(ReadArguments(data, ref offset, typeTags, ref tagIndex, stopAtArrayEnd: true));
+                    values.Add(ReadArguments(data, ref offset, typeTags, ref tagIndex, true));
                     break;
                 case 's':
                     values.Add(ReadPaddedString(data, ref offset));
@@ -94,10 +85,7 @@ internal static class OscCodec
                     EnsureAvailable(data, offset, 4);
                     var length = BinaryPrimitives.ReadInt32BigEndian(data[offset..]);
                     offset += 4;
-                    if (length < 0)
-                    {
-                        throw new QLabOscPacketException("The OSC blob length is negative.");
-                    }
+                    if (length < 0) throw new QLabOscPacketException("The OSC blob length is negative.");
                     EnsureAvailable(data, offset, length);
                     values.Add(data.Slice(offset, length).ToArray());
                     offset = Align4(offset + length);
@@ -107,10 +95,7 @@ internal static class OscCodec
             }
         }
 
-        if (stopAtArrayEnd)
-        {
-            throw new QLabOscPacketException("The OSC type tag string contains an unterminated array.");
-        }
+        if (stopAtArrayEnd) throw new QLabOscPacketException("The OSC type tag string contains an unterminated array.");
 
         return values;
     }
@@ -142,14 +127,12 @@ internal static class OscCodec
                 break;
             case IEnumerable<object?> collection:
                 tags.Append('[');
-                foreach (var item in collection)
-                {
-                    AppendTypeTag(tags, item);
-                }
+                foreach (var item in collection) AppendTypeTag(tags, item);
                 tags.Append(']');
                 break;
             default:
-                throw new QLabOscPacketException($"OSC argument type '{argument.GetType().FullName}' is not supported.");
+                throw new QLabOscPacketException(
+                    $"OSC argument type '{argument.GetType().FullName}' is not supported.");
         }
     }
 
@@ -189,13 +172,11 @@ internal static class OscCodec
                 WritePadding(stream, blob.Length);
                 return;
             case IEnumerable<object?> collection:
-                foreach (var item in collection)
-                {
-                    WriteArgument(stream, item);
-                }
+                foreach (var item in collection) WriteArgument(stream, item);
                 return;
             default:
-                throw new QLabOscPacketException($"OSC argument type '{argument.GetType().FullName}' is not supported.");
+                throw new QLabOscPacketException(
+                    $"OSC argument type '{argument.GetType().FullName}' is not supported.");
         }
     }
 
@@ -210,41 +191,31 @@ internal static class OscCodec
     private static string ReadPaddedString(ReadOnlySpan<byte> data, ref int offset)
     {
         if (offset >= data.Length)
-        {
             throw new QLabOscPacketException("The OSC packet ended before a string could be read.");
-        }
 
         var relativeEnd = data[offset..].IndexOf((byte)0);
-        if (relativeEnd < 0)
-        {
-            throw new QLabOscPacketException("The OSC packet contains an unterminated string.");
-        }
+        if (relativeEnd < 0) throw new QLabOscPacketException("The OSC packet contains an unterminated string.");
 
         var value = Encoding.UTF8.GetString(data.Slice(offset, relativeEnd));
         offset = Align4(offset + relativeEnd + 1);
-        if (offset > data.Length)
-        {
-            throw new QLabOscPacketException("The OSC string padding extends beyond the packet.");
-        }
+        if (offset > data.Length) throw new QLabOscPacketException("The OSC string padding extends beyond the packet.");
         return value;
     }
 
     private static void WritePadding(Stream stream, int bytesWritten)
     {
         var padding = (4 - bytesWritten % 4) % 4;
-        for (var index = 0; index < padding; index++)
-        {
-            stream.WriteByte(0);
-        }
+        for (var index = 0; index < padding; index++) stream.WriteByte(0);
     }
 
-    private static int Align4(int value) => (value + 3) & ~3;
+    private static int Align4(int value)
+    {
+        return (value + 3) & ~3;
+    }
 
     private static void EnsureAvailable(ReadOnlySpan<byte> data, int offset, int count)
     {
         if (count < 0 || offset < 0 || offset + count > data.Length)
-        {
             throw new QLabOscPacketException("The OSC packet ended unexpectedly.");
-        }
     }
 }
