@@ -7,7 +7,8 @@ public sealed record QLabNetworkCuePlan(
     string ListNumber,
     string CueNumber,
     string? QLabNumber,
-    string? Notes) : QLabPlanItem;
+    string? Notes,
+    bool Armed = true) : QLabPlanItem;
 
 public sealed record QLabMemoCuePlan(
     string Name,

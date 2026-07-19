@@ -12,6 +12,7 @@ internal sealed class QLabTcpOscTransport(
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly TimeSpan _timeout = timeout ?? TimeSpan.FromSeconds(10);
     private NetworkStream? _stream;
+    private SlipStreamReader? _reader;
 
     public async Task ConnectAsync(CancellationToken cancellationToken)
     {
@@ -21,6 +22,7 @@ internal sealed class QLabTcpOscTransport(
             timeoutSource.CancelAfter(_timeout);
             await _client.ConnectAsync(host, port, timeoutSource.Token);
             _stream = _client.GetStream();
+            _reader = new SlipStreamReader(_stream);
         }
         catch (EosToQLabException)
         {
@@ -35,6 +37,7 @@ internal sealed class QLabTcpOscTransport(
     public async Task<QLabOscReply> SendAsync(OscMessage message, CancellationToken cancellationToken)
     {
         var stream = _stream ?? throw new QLabTransportNotConnectedException();
+        var reader = _reader ?? throw new QLabTransportNotConnectedException();
         await _sendLock.WaitAsync(cancellationToken);
         try
         {
@@ -46,7 +49,7 @@ internal sealed class QLabTcpOscTransport(
             timeoutSource.CancelAfter(_timeout);
             while (true)
             {
-                var replyFrame = await SlipCodec.ReadFrameAsync(stream, timeoutSource.Token);
+                var replyFrame = await reader.ReadFrameAsync(timeoutSource.Token);
                 var decoded = OscCodec.Decode(replyFrame);
                 if (!decoded.Address.StartsWith(QLabProtocol.Addresses.ReplyPrefix, StringComparison.Ordinal)) continue;
                 return QLabOscReply.Parse(decoded);

@@ -17,17 +17,20 @@ public sealed class QLabNetworkCuePlanMapper : QLabPlanItemMapper<QLabNetworkCue
         if (!string.IsNullOrWhiteSpace(item.Notes))
             properties.Add(new QLabCuePropertyAssignment(QLabCueProperty.Notes, item.Notes));
 
+        if (!item.Armed)
+        {
+            properties.Add(new QLabCuePropertyAssignment(QLabCueProperty.Armed, false));
+        }
+
+        var eosCommand = QLabEosNetworkCommand.RunCueInSpecificList(
+            item.ListNumber,
+            item.CueNumber);
+
         return new QLabCueCreationRequest(
             QLabCueType.Network,
             item.Name,
             properties,
-            [
-                new QLabNetworkParameterAssignment(QLabNetworkParameter.Category, QLabEosNetworkCommand.Category),
-                new QLabNetworkParameterAssignment(QLabNetworkParameter.Action, QLabEosNetworkCommand.Action),
-                new QLabNetworkParameterAssignment(QLabNetworkParameter.Description, QLabEosNetworkCommand.Description),
-                new QLabNetworkParameterAssignment(QLabNetworkParameter.CueListNumber, item.ListNumber),
-                new QLabNetworkParameterAssignment(QLabNetworkParameter.CueNumber, item.CueNumber)
-            ],
+            eosCommand.BuildParameters(),
             context.NetworkPatch,
             item.QLabNumber);
     }

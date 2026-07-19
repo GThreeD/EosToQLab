@@ -33,6 +33,7 @@ public sealed class QLabImportPlanExecutor
         ArgumentNullException.ThrowIfNull(context);
 
         var pendingCueNumbers = new List<QLabPendingCueNumberAssignment>();
+        var verifiedNetworkPatchIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var item in plan.Items)
         {
@@ -42,9 +43,12 @@ public sealed class QLabImportPlanExecutor
                 throw new QLabUnsupportedPlanItemException(item.GetType().Name);
 
             var request = mapper.Map(item, context);
+            var verifyNetworkPatch = request.ExpectedNetworkPatch is not null
+                                     && verifiedNetworkPatchIds.Add(request.ExpectedNetworkPatch.Id);
             var pendingCueNumber = await ExecuteCueRequestAsync(
                 session,
                 request,
+                verifyNetworkPatch,
                 cancellationToken);
             if (pendingCueNumber is not null) pendingCueNumbers.Add(pendingCueNumber);
         }
@@ -98,6 +102,7 @@ public sealed class QLabImportPlanExecutor
     private static async Task<QLabPendingCueNumberAssignment?> ExecuteCueRequestAsync(
         IQLabOscSession session,
         QLabCueCreationRequest request,
+        bool verifyNetworkPatch,
         CancellationToken cancellationToken)
     {
         try
@@ -107,13 +112,16 @@ public sealed class QLabImportPlanExecutor
                 request.Name,
                 cancellationToken);
 
-            // QLab may automatically number newly created cues. Clear that value first,
-            // so a rejected EOS number never leaves an incremented fallback number behind.
-            await session.SetCuePropertyAsync(
-                cueId,
-                QLabCueProperty.Number,
-                string.Empty,
-                cancellationToken);
+            if (!string.IsNullOrWhiteSpace(request.DesiredCueNumber))
+            {
+                // QLab may automatically number newly created cues. Clear that value first,
+                // so a rejected EOS number never leaves an incremented fallback number behind.
+                await session.SetCuePropertyAsync(
+                    cueId,
+                    QLabCueProperty.Number,
+                    string.Empty,
+                    cancellationToken);
+            }
 
             foreach (var assignment in request.CueProperties)
                 await session.SetCuePropertyAsync(
@@ -122,14 +130,31 @@ public sealed class QLabImportPlanExecutor
                     assignment.Value,
                     cancellationToken);
 
-            foreach (var assignment in request.NetworkParameters)
-                await session.SetNetworkParameterAsync(
-                    cueId,
-                    assignment.Parameter,
-                    assignment.Value,
-                    cancellationToken);
+            if (request.NetworkParameters.Count > 0)
+            {
+                var orderedParameters = request.NetworkParameters
+                    .OrderBy(assignment => assignment.Index)
+                    .ToArray();
+                for (var index = 0; index < orderedParameters.Length; index++)
+                {
+                    if (orderedParameters[index].Index != index)
+                    {
+                        throw new InvalidOperationException(
+                            "QLab network parameter indices must be contiguous and start at zero.");
+                    }
+                }
 
-            if (request.ExpectedNetworkPatch is not null)
+                foreach (var assignment in orderedParameters)
+                {
+                    await session.SetNetworkParameterAsync(
+                        cueId,
+                        assignment.Index,
+                        assignment.Value,
+                        cancellationToken);
+                }
+            }
+
+            if (verifyNetworkPatch && request.ExpectedNetworkPatch is not null)
             {
                 var appliedPatchId = await session.QueryCuePropertyAsync(
                     cueId,

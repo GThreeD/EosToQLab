@@ -7,7 +7,7 @@ public sealed record QLabImportOptions
     public required string CueListName { get; init; }
     public string NetworkPatchName { get; init; } = "Patch 1";
     public SceneTextImportMode SceneTextMode { get; init; } = SceneTextImportMode.MemoCue;
-    public bool SkipCueAfterFollowOrHang { get; init; } = true;
+    public FollowedCueImportMode FollowedCueMode { get; init; } = FollowedCueImportMode.Exclude;
     public CueListConflictPolicy ConflictPolicy { get; init; } = CueListConflictPolicy.Fail;
     public bool ExplicitReplacementConsent { get; init; }
     public bool SaveWorkspaceAfterImport { get; init; } = true;

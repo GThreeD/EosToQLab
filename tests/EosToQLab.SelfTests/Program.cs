@@ -8,18 +8,26 @@ using EosToQLab.Infrastructure.Import.Csv;
 using EosToQLab.Infrastructure.Import.Esf3d;
 using EosToQLab.Infrastructure.QLab;
 using EosToQLab.Infrastructure.QLab.Workflow;
+using EosToQLab.Infrastructure.QLab.Osc;
 
 var tests = new List<(string Name, Func<Task> Run)>
 {
     ("Factory selects CSV and ESF3D strategies", TestFactoryAsync),
     ("Reference EOS CSV maps into the common cue model", TestCsvAsync),
     ("Synthetic ESF3D maps into the common cue model", TestEsf3dAsync),
-    ("Follow/hang skips exactly one following cue", TestFollowLogicAsync),
+    ("Follow/hang chains can be excluded", TestFollowExcludeChainAsync),
+    ("Follow/hang chains can be imported disarmed", TestFollowImportDisarmedAsync),
+    ("Follow/hang state is isolated per EOS list", TestFollowStatePerListAsync),
     ("Scene text creates memo cues without duplication", TestSceneTextAsync),
     ("Plans always request the exact EOS cue number", TestDesiredNumberingAsync),
     ("Duplicate EOS cue numbers are attempted independently", TestDuplicateDesiredNumberingAsync),
     ("Memo plan maps to declarative QLab properties", TestMemoMapperAsync),
-    ("Network plan maps to properties and network parameters", TestNetworkMapperAsync),
+    ("Network plan maps the EOS parameter stack", TestNetworkMapperAsync),
+    ("EOS user selection shifts visible network parameters", TestEosUserParameterStackAsync),
+    ("EOS Run cue omits the list parameter", TestEosRunCueParameterStackAsync),
+    ("Memo creation leaves QLab numbering untouched", TestMemoCreationDoesNotTouchNumberAsync),
+    ("Network parameters are sent as ordered individual writes", TestIndividualNetworkParametersAndSinglePatchVerificationAsync),
+    ("Buffered SLIP reader preserves consecutive frames", TestBufferedSlipReaderAsync),
     ("Rejected QLab numbers leave cues unnumbered", TestRejectedNumberLeavesBlankAsync),
     ("Available QLab numbers use the exact EOS number", TestSuccessfulNumberAssignmentAsync)
 };
@@ -83,7 +91,7 @@ static async Task TestEsf3dAsync()
         .ImportAsync(new EosImportRequest(Path.GetFileName(path), stream));
 
     Assert(result.SourceKind == EosSourceKind.Esf3d, "The source kind is incorrect.");
-    Assert(result.Cues.Count == 3, "The synthetic ESF3D fixture returned the wrong cue count.");
+    Assert(result.Cues.Count == 4, "The synthetic ESF3D fixture returned the wrong cue count.");
 
     var first = result.Cues.Single(cue => cue.CueNumber == "1");
     Assert(first.Label == "Blackout", "The ESF3D cue label was not mapped.");
@@ -93,28 +101,83 @@ static async Task TestEsf3dAsync()
 
     var second = result.Cues.Single(cue => cue.CueNumber == "2");
     Assert(second.Follow == "H1.5", "The structured ESF3D hang value was not mapped.");
-    Assert(!result.Diagnostics.OfType<Esf3dFollowNotDecodedWarning>().Any(),
-        "A decoded follow/hang value was reported as unsupported.");
-    Assert(result.Diagnostics.OfType<Esf3dLossTolerantParsingWarning>().Any(),
-        "The loss-tolerant parser warning is missing.");
+
+    var fourth = result.Cues.Single(cue => cue.CueNumber == "4");
+    Assert(fourth.Follow == "F1", "The current EOS continuation-object follow value was not mapped.");
+    Assert(!result.Diagnostics.OfType<Esf3dFollowNotDecodedWarning>().Any(), "A decoded follow/hang value was reported as unsupported.");
+    Assert(result.Diagnostics.OfType<Esf3dLossTolerantParsingWarning>().Any(), "The loss-tolerant parser warning is missing.");
 }
 
-static Task TestFollowLogicAsync()
+static Task TestFollowExcludeChainAsync()
 {
     var cues = new[]
     {
-        Cue(0, "1", follow: "F"),
-        Cue(1, "2"),
-        Cue(2, "3")
+        Cue(0, "83.1", follow: "F1"),
+        Cue(1, "83.2", follow: "F1"),
+        Cue(2, "83.3", follow: "F1"),
+        Cue(3, "84"),
+        Cue(4, "85")
     };
     var diagnostics = new List<EosDiagnostic>();
-    var plan = new QLabImportPlanBuilder().Build(cues, Options(), diagnostics);
+    var plan = new QLabImportPlanBuilder().Build(
+        cues,
+        Options() with { FollowedCueMode = FollowedCueImportMode.Exclude },
+        diagnostics);
     var networkCues = plan.Items.OfType<QLabNetworkCuePlan>().ToArray();
 
+    Assert(networkCues.Select(cue => cue.CueNumber).SequenceEqual(["83.1", "85"]),
+        "The complete follow chain was not excluded.");
+    Assert(diagnostics.OfType<CueSkippedAfterFollowOrHangWarning>().Count() == 3,
+        "Every automatically triggered cue should produce an exclusion warning.");
+    return Task.CompletedTask;
+}
+
+static Task TestFollowImportDisarmedAsync()
+{
+    var cues = new[]
+    {
+        Cue(0, "83.1", follow: "F1"),
+        Cue(1, "83.2", follow: "F1"),
+        Cue(2, "83.3", follow: "F1"),
+        Cue(3, "84"),
+        Cue(4, "85")
+    };
+    var diagnostics = new List<EosDiagnostic>();
+    var plan = new QLabImportPlanBuilder().Build(
+        cues,
+        Options() with { FollowedCueMode = FollowedCueImportMode.ImportDisarmed },
+        diagnostics);
+    var networkCues = plan.Items.OfType<QLabNetworkCuePlan>().ToArray();
+
+    Assert(networkCues.Length == 5, "Disarmed mode must keep every cue in the plan.");
+    Assert(networkCues.Where(cue => cue.CueNumber is "83.2" or "83.3" or "84").All(cue => !cue.Armed),
+        "Automatically triggered cues were not disarmed.");
+    Assert(networkCues.Where(cue => cue.CueNumber is "83.1" or "85").All(cue => cue.Armed),
+        "Manually triggered cues must stay armed.");
+    Assert(diagnostics.OfType<CueImportedDisarmedAfterFollowOrHangWarning>().Count() == 3,
+        "Every automatically triggered cue should produce a disarmed warning.");
+    return Task.CompletedTask;
+}
+
+static Task TestFollowStatePerListAsync()
+{
+    var cues = new[]
+    {
+        Cue(0, "1", follow: "F1", listNumber: 1),
+        Cue(1, "1", listNumber: 2),
+        Cue(2, "2", listNumber: 1)
+    };
+    var plan = new QLabImportPlanBuilder().Build(
+        cues,
+        Options() with { FollowedCueMode = FollowedCueImportMode.Exclude });
+    var networkCues = plan.Items.OfType<QLabNetworkCuePlan>().ToArray();
+
+    Assert(networkCues.Any(cue => cue.ListNumber == "2" && cue.CueNumber == "1"),
+        "A Follow in EOS list 1 must not suppress a cue in EOS list 2.");
+    Assert(networkCues.All(cue => !(cue.ListNumber == "1" && cue.CueNumber == "2")),
+        "The next cue in EOS list 1 should be excluded.");
     Assert(networkCues.Length == 2, "Follow/hang did not skip exactly one cue.");
     Assert(networkCues[0].CueNumber == "1" && networkCues[1].CueNumber == "3", "The wrong cue was skipped.");
-    Assert(diagnostics.OfType<CueSkippedAfterFollowOrHangWarning>().Count() == 1,
-        "The skip warning count is incorrect.");
     return Task.CompletedTask;
 }
 
@@ -201,7 +264,7 @@ static Task TestNetworkMapperAsync()
 {
     var patch = new QLabNetworkPatch("patch-id", "EOS", "eos");
     var request = new QLabNetworkCuePlanMapper().Map(
-        new QLabNetworkCuePlan("LX 1/2", "1", "2", "2", "Notes"),
+        new QLabNetworkCuePlan("LX 1/2", "1", "2", "2", "Notes", Armed: false),
         new QLabPlanExecutionContext(patch));
 
     Assert(request.CueType == QLabCueType.Network, "Network cue type was not mapped.");
@@ -212,15 +275,127 @@ static Task TestNetworkMapperAsync()
     Assert(request.CueProperties.All(property =>
             property.Property != QLabCueProperty.Number),
         "The mapper must defer QLab number assignment until all cues are unnumbered.");
+    Assert(request.CueProperties.Any(property =>
+        property.Property == QLabCueProperty.Armed
+        && Equals(property.Value, false)),
+        "A followed EOS cue must be mapped to an explicitly disarmed QLab cue.");
     Assert(request.DesiredCueNumber == "2",
         "The desired QLab number must equal the EOS cue number exactly.");
-    Assert(request.NetworkParameters.Any(parameter =>
-        parameter.Parameter == QLabNetworkParameter.CueListNumber
-        && parameter.Value == "1"), "Cue-list parameter is missing.");
-    Assert(request.NetworkParameters.Any(parameter =>
-        parameter.Parameter == QLabNetworkParameter.CueNumber
-        && parameter.Value == "2"), "Cue-number parameter is missing.");
+    Assert(request.NetworkParameters.Select(parameter => (parameter.Index, parameter.Parameter, parameter.Value))
+        .SequenceEqual(new[]
+        {
+            (0, QLabEosParameter.Type, "Cues"),
+            (1, QLabEosParameter.SpecifyUser, "No"),
+            (2, QLabEosParameter.Command, "Run cue in specific list"),
+            (3, QLabEosParameter.List, "1"),
+            (4, QLabEosParameter.Cue, "2")
+        }), "The EOS parameter stack is incorrect.");
     return Task.CompletedTask;
+}
+
+static Task TestEosUserParameterStackAsync()
+{
+    var command = QLabEosNetworkCommand.RunCueInSpecificList("7", "12.5", user: "3");
+    var parameters = command.BuildParameters();
+
+    Assert(parameters.Select(parameter => (parameter.Index, parameter.Parameter, parameter.Value))
+        .SequenceEqual(new[]
+        {
+            (0, QLabEosParameter.Type, "Cues"),
+            (1, QLabEosParameter.SpecifyUser, "Yes"),
+            (2, QLabEosParameter.User, "3"),
+            (3, QLabEosParameter.Command, "Run cue in specific list"),
+            (4, QLabEosParameter.List, "7"),
+            (5, QLabEosParameter.Cue, "12.5")
+        }), "Specify user did not shift the visible parameter indices.");
+    return Task.CompletedTask;
+}
+
+static Task TestEosRunCueParameterStackAsync()
+{
+    var command = QLabEosNetworkCommand.RunCue("12.5");
+    var parameters = command.BuildParameters();
+
+    Assert(parameters.Select(parameter => (parameter.Index, parameter.Parameter, parameter.Value))
+        .SequenceEqual(new[]
+        {
+            (0, QLabEosParameter.Type, "Cues"),
+            (1, QLabEosParameter.SpecifyUser, "No"),
+            (2, QLabEosParameter.Command, "Run cue"),
+            (3, QLabEosParameter.Cue, "12.5")
+        }), "Run cue must not emit a List parameter.");
+    return Task.CompletedTask;
+}
+
+static async Task TestMemoCreationDoesNotTouchNumberAsync()
+{
+    var patch = new QLabNetworkPatch("patch-id", "EOS", "eos");
+    await using var session = new TrackingNumberSession(patch.Id);
+    var executor = new QLabImportPlanExecutor([new QLabMemoCuePlanMapper()]);
+    var plan = new QLabImportPlan(
+    [
+        new QLabMemoCuePlan("Scene A", null)
+    ]);
+
+    await executor.ExecuteAsync(
+        session,
+        plan,
+        new QLabPlanExecutionContext(patch));
+
+    Assert(session.NumberWrites.Count == 0,
+        "Memo creation must not clear or assign a QLab cue number.");
+}
+
+static async Task TestIndividualNetworkParametersAndSinglePatchVerificationAsync()
+{
+    var patch = new QLabNetworkPatch("patch-id", "EOS", "eos");
+    await using var session = new TrackingNumberSession(patch.Id);
+    var executor = new QLabImportPlanExecutor([new QLabNetworkCuePlanMapper()]);
+    var plan = new QLabImportPlan(
+    [
+        new QLabNetworkCuePlan("LX 1", "1", "1", "1", null),
+        new QLabNetworkCuePlan("LX 2", "1", "2", "2", null)
+    ]);
+
+    await executor.ExecuteAsync(
+        session,
+        plan,
+        new QLabPlanExecutionContext(patch));
+
+    Assert(session.NetworkParameterWrites.Count == 10,
+        "Each network cue should receive its five EOS parameters.");
+    Assert(session.NetworkParameterWrites.Take(5).SequenceEqual(
+        new[]
+        {
+            (0, "Cues"),
+            (1, "No"),
+            (2, "Run cue in specific list"),
+            (3, "1"),
+            (4, "1")
+        }),
+        "The first network cue parameter sequence is incorrect.");
+    Assert(session.NetworkPatchQueryCount == 1,
+        "A shared network patch should be verified only once per import.");
+}
+
+static async Task TestBufferedSlipReaderAsync()
+{
+    byte[] firstPayload = [1, SlipCodec.End, 2, SlipCodec.Escape, 3];
+    byte[] secondPayload = [4, 5, 6];
+    var firstFrame = SlipCodec.Frame(firstPayload);
+    var secondFrame = SlipCodec.Frame(secondPayload);
+    var streamBytes = firstFrame.Concat(secondFrame).ToArray();
+
+    await using var stream = new MemoryStream(streamBytes);
+    var reader = new SlipStreamReader(stream, bufferSize: 5);
+
+    var decodedFirst = await reader.ReadFrameAsync(CancellationToken.None);
+    var decodedSecond = await reader.ReadFrameAsync(CancellationToken.None);
+
+    Assert(decodedFirst.SequenceEqual(firstPayload),
+        "The buffered SLIP reader corrupted an escaped payload.");
+    Assert(decodedSecond.SequenceEqual(secondPayload),
+        "The buffered SLIP reader lost bytes from the following frame.");
 }
 
 static async Task TestRejectedNumberLeavesBlankAsync()
@@ -249,8 +424,16 @@ static async Task TestRejectedNumberLeavesBlankAsync()
         "A conflicting EOS cue number must leave the QLab cue unnumbered.");
     Assert(!session.NumberWrites.Any(value => value == "2"),
         "The importer must never increment a conflicting QLab cue number.");
-    Assert(session.NetworkParameters.Count == 5,
-        "Network parameters were not applied before number assignment.");
+    Assert(session.NetworkParameterWrites.SequenceEqual(
+        new[]
+        {
+            (0, "Cues"),
+            (1, "No"),
+            (2, "Run cue in specific list"),
+            (3, "1"),
+            (4, "1")
+        }),
+        "The ordered network parameter values are incorrect.");
 }
 
 static async Task TestSuccessfulNumberAssignmentAsync()
@@ -331,8 +514,9 @@ internal sealed class TrackingNumberSession : IQLabOscSession
 
     public QLabWorkspace Workspace { get; } = new("workspace", "Test", null);
     public List<QLabCueProperty> SetProperties { get; } = [];
-    public List<QLabNetworkParameter> NetworkParameters { get; } = [];
+    public List<(int Index, string Value)> NetworkParameterWrites { get; } = [];
     public List<string> NumberWrites { get; } = [];
+    public int NetworkPatchQueryCount { get; private set; }
     public string CurrentNumber { get; private set; } = "auto-1";
 
     public Task<string> CreateCueAsync(
@@ -368,11 +552,11 @@ internal sealed class TrackingNumberSession : IQLabOscSession
 
     public Task SetNetworkParameterAsync(
         string cueId,
-        QLabNetworkParameter parameter,
+        int parameterIndex,
         string value,
         CancellationToken cancellationToken = default)
     {
-        NetworkParameters.Add(parameter);
+        NetworkParameterWrites.Add((parameterIndex, value));
         return Task.CompletedTask;
     }
 
@@ -381,11 +565,15 @@ internal sealed class TrackingNumberSession : IQLabOscSession
         QLabCueProperty property,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult<string?>(property == QLabCueProperty.NetworkPatchId
-            ? _patchId
-            : property == QLabCueProperty.Number
-                ? CurrentNumber
-                : null);
+        if (property == QLabCueProperty.NetworkPatchId)
+        {
+            NetworkPatchQueryCount++;
+            return Task.FromResult<string?>(_patchId);
+        }
+
+        return Task.FromResult<string?>(property == QLabCueProperty.Number
+            ? CurrentNumber
+            : null);
     }
 
     public ValueTask DisposeAsync()

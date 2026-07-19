@@ -15,30 +15,42 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
         ArgumentNullException.ThrowIfNull(options);
 
         var items = new List<QLabPlanItem>();
-        var skipNextByList = new Dictionary<int, bool>();
+        var triggeredByPreviousCue = new Dictionary<int, bool>();
         string? previousScene = null;
 
         foreach (var cue in cues.OrderBy(cue => cue.SourceOrder))
         {
-            var skipCurrent = options.SkipCueAfterFollowOrHang
-                              && skipNextByList.GetValueOrDefault(cue.ListNumber);
+            var isFollowedCue = triggeredByPreviousCue.GetValueOrDefault(cue.ListNumber);
+            var excludeCue = isFollowedCue
+                && options.FollowedCueMode == FollowedCueImportMode.Exclude;
 
-            if (skipCurrent)
+            if (excludeCue)
             {
                 diagnostics?.Add(new CueSkippedAfterFollowOrHangWarning(cue.DisplayCueNumber));
             }
             else
             {
+                var importDisarmed = isFollowedCue
+                    && options.FollowedCueMode == FollowedCueImportMode.ImportDisarmed;
+
+                if (importDisarmed)
+                {
+                    diagnostics?.Add(new CueImportedDisarmedAfterFollowOrHangWarning(cue.DisplayCueNumber));
+                }
+
                 AddSceneMemoIfNeeded(items, cue, options, ref previousScene);
                 items.Add(new QLabNetworkCuePlan(
                     NullToEmpty(cue.Label),
                     cue.ListNumber.ToString(CultureInfo.InvariantCulture),
                     cue.CueNumber,
                     cue.CueNumber,
-                    NullIfWhiteSpace(cue.CueNotes)));
+                    NullIfWhiteSpace(cue.CueNotes),
+                    Armed: !importDisarmed));
             }
 
-            skipNextByList[cue.ListNumber] = options.SkipCueAfterFollowOrHang && cue.HasFollowOrHang;
+            // This is deliberately updated even when the cue itself is excluded. A chain such as
+            // 83.1 -> 83.2 -> 83.3 -> 84 must remain a chain while the plan is being filtered.
+            triggeredByPreviousCue[cue.ListNumber] = cue.HasFollowOrHang;
         }
 
         return new QLabImportPlan(items);

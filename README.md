@@ -6,7 +6,7 @@ The application does not export an intermediate file and does not use AppleScrip
 
 ## Main behavior
 
-- Accepts `.csv` and `.esf3d` by drag and drop or file selection.
+- Accepts `.csv` and `.esf3d` through the native macOS file picker. The app registers `.esf3d` as an imported document type so the extension remains selectable.
 - Selects the import strategy through `IEosCueImporterFactory`.
 - Both source implementations implement the same `IEosCueImporter` contract.
 - Maps both formats into the same `EosCue` domain model.
@@ -21,7 +21,8 @@ The application does not export an intermediate file and does not use AppleScrip
 - Allows replacement only after explicit confirmation in the UI and a second enforcement check in the QLab service.
 - Maps EOS scene text to QLab Memo-cue names; generated Memo notes stay empty.
 - Maps EOS labels to Network-cue names and EOS cue notes to Network-cue notes without generated prefixes.
-- Corrects the Follow/Hang handling, reads `FOLLOW` by column name in CSV, and decodes known ESF3D follow/hang encodings.
+- Models the QLab EOS Network-cue parameter stack explicitly as Type, Specify user, optional User, Command, and command-specific arguments. The current import uses Cues → Run cue in specific list → List/Cue.
+- Corrects Follow/Hang handling, reads `FOLLOW` by column name in CSV, and decodes both legacy and current ESF3D continuation objects. Automatically triggered cues can be excluded or imported disarmed.
 - Uses dedicated exception and warning types with English messages and stable diagnostic codes.
 
 ## Small project structure
@@ -85,10 +86,30 @@ The binder caches reflection metadata once per source type, reads values by head
 - cue labels directly following the encoded cue number;
 - cue notes from the dedicated cue-header field;
 - nested scene labels;
-- known scalar, textual, and compact-object Follow/Hang encodings;
+- known scalar, textual, compact-object, and current continuation-object Follow/Hang encodings;
 - other short text fields as additional diagnostic data.
 
 Unknown Follow/Hang object variants are not guessed. They produce a cue-specific warning and remain empty instead of being interpreted as another field.
+
+
+## Follow/Hang import policy
+
+The plan builder tracks automatic playback chains separately for every EOS cue-list number. When a cue has Follow or Hang, the next cue is considered automatically triggered; if that next cue also has Follow/Hang, the chain continues. The UI offers two policies:
+
+- **Do not import**: automatically triggered cues are omitted completely.
+- **Import disarmed**: automatically triggered Network cues are created with `armed = false`.
+
+The cue that starts the chain remains a normal imported cue. For example, `83.1 F1`, `83.2 F1`, `83.3 F1`, `84` affects 83.2, 83.3, and 84.
+
+## EOS Network cue parameters
+
+`QLabEosNetworkCommand` represents the visible EOS Network-cue fields in order. It uses string-backed target and command value types so additional QLab menu values can be added without changing the OSC session API. For the current import it emits:
+
+1. Type = `Cues`
+2. Specify user = `No` (or `Yes` plus a User field)
+3. Command = `Run cue in specific list`
+4. List = the EOS list number
+5. Cue = the EOS cue number
 
 ## QLab requirements
 

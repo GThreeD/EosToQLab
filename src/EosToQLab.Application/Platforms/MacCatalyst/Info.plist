@@ -1,43 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-    <dict>
-        <key>UIDeviceFamily</key>
-        <array>
-            <integer>2</integer>
-        </array>
-        <key>NSLocalNetworkUsageDescription</key>
-        <string>EosToQLab connects to QLab on this Mac through QLab's OSC TCP interface.</string>
-        <key>CFBundleDocumentTypes</key>
-        <array>
-            <dict>
-                <key>CFBundleTypeName</key>
-                <string>EOS CSV</string>
-                <key>CFBundleTypeRole</key>
-                <string>Viewer</string>
-                <key>LSHandlerRank</key>
-                <string>Alternate</string>
-                <key>CFBundleTypeExtensions</key>
-                <array>
-                    <string>csv</string>
-                </array>
-            </dict>
-            <dict>
-                <key>CFBundleTypeName</key>
-                <string>EOS ESF3D</string>
-                <key>CFBundleTypeRole</key>
-                <string>Viewer</string>
-                <key>LSHandlerRank</key>
-                <string>Alternate</string>
-                <key>CFBundleTypeExtensions</key>
-                <array>
-                    <string>esf3d</string>
-                </array>
-            </dict>
-        </array>
-        <key>UIBackgroundModes</key>
-        <array>
-            <string>fetch</string>
-        </array>
-    </dict>
+<dict>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>2</integer>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>EosToQLab connects to QLab on this Mac through QLab's OSC TCP interface.</string>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.gthreed.eostoqlab.esf3d</string>
+			<key>UTTypeDescription</key>
+			<string>ETC Eos show archive</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.zip-archive</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>esf3d</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/zip</string>
+			</dict>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>EOS CSV</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.comma-separated-values-text</string>
+			</array>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>csv</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>EOS ESF3D</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.gthreed.eostoqlab.esf3d</string>
+			</array>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>esf3d</string>
+			</array>
+		</dict>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
+</dict>
 </plist>

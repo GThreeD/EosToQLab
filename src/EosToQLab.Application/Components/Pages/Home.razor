@@ -9,8 +9,7 @@
     <div>
         <div class="eyebrow">Import workflow</div>
         <h1>Build a protected QLab cue list from EOS</h1>
-        <p>Drop an EOS CSV or ESF3D file, review the parsed cues, and import them into a workspace that is already open
-            in QLab 5.</p>
+        <p>Choose an EOS CSV or ESF3D file, review the parsed cues, and import them into a workspace that is already open in QLab 5.</p>
     </div>
     <div class="status-pill @(_busy ? "working" : "ready")">
         @(_busy ? "Working…" : "Ready")
@@ -40,7 +39,7 @@
         </div>
 
         <label class="drop-zone @(_busy ? "disabled" : string.Empty)">
-            <InputFile OnChange="LoadSourceAsync" accept=".csv,.esf3d" disabled="@_busy"/>
+            <InputFile OnChange="LoadSourceAsync" disabled="@_busy" />
             <span class="drop-icon">⇩</span>
             <strong>Drop a file here or click to choose</strong>
             <span>Accepted: .csv, .esf3d</span>
@@ -119,16 +118,20 @@
                 <option value="@SceneTextImportMode.Ignore">Ignore</option>
                 <option value="@SceneTextImportMode.MemoCue">Create memo cues</option>
             </select>
-            <small>Memo cues remain unnumbered. Network cues receive exactly the EOS cue number when that number is
-                available in QLab.</small>
+            <small>Memo cues remain unnumbered. Network cues receive exactly the EOS cue number when that number is available in QLab.</small>
+        </label>
+        <label class="field">
+            <span>Cues triggered by Follow/Hang</span>
+            <select @bind="_followedCueMode" disabled="@_busy">
+                <option value="@FollowedCueImportMode.Exclude">Do not import</option>
+                <option value="@FollowedCueImportMode.ImportDisarmed">Import disarmed</option>
+            </select>
+            <small>A complete chain is detected per EOS list. For example, 83.1 → 83.2 → 83.3 → 84 marks 83.2 through 84 as automatically triggered.</small>
         </label>
     </div>
 
     <div class="checks">
-        <label><input type="checkbox" @bind="_skipCueAfterFollowOrHang" disabled="@_busy"/> Skip the cue immediately
-            following an EOS follow/hang cue</label>
-        <label><input type="checkbox" @bind="_saveWorkspace" disabled="@_busy"/> Save the QLab workspace after a
-            successful import</label>
+        <label><input type="checkbox" @bind="_saveWorkspace" disabled="@_busy" /> Save the QLab workspace after a successful import</label>
     </div>
 
     @if (_conflictDetected)
@@ -217,7 +220,7 @@
     private string _cueListName = $"EOS Import {DateTime.Now:yyyy-MM-dd HHmm}";
     private string _networkPatchName = "Patch 1";
     private SceneTextImportMode _sceneMode = SceneTextImportMode.MemoCue;
-    private bool _skipCueAfterFollowOrHang = true;
+    private FollowedCueImportMode _followedCueMode = FollowedCueImportMode.Exclude;
     private bool _saveWorkspace = true;
     private bool _conflictDetected;
     private bool _replacementConsent;
@@ -272,20 +275,39 @@
     {
         await RunGuardedAsync(async () =>
         {
-            _source = null;
-            _successMessage = null;
-            _conflictDetected = false;
-            _replacementConsent = false;
-
             var file = eventArgs.File;
-            await using var browserStream = file.OpenReadStream(MaximumSourceSize);
-            using var content = new MemoryStream(file.Size > int.MaxValue ? 0 : (int)file.Size);
-            await browserStream.CopyToAsync(content);
-            content.Position = 0;
-
-            var importer = ImporterFactory.CreateFor(file.Name);
-            _source = await importer.ImportAsync(new EosImportRequest(file.Name, content));
+            await using var stream = file.OpenReadStream(MaximumSourceSize);
+            await LoadSourceContentAsync(file.Name, stream, file.Size);
         });
+    }
+
+    private async Task LoadSourceContentAsync(string fileName, Stream source, long? sourceSize)
+    {
+        _source = null;
+        _successMessage = null;
+        _conflictDetected = false;
+        _replacementConsent = false;
+
+        if (sourceSize is > MaximumSourceSize)
+        {
+            throw new InvalidOperationException($"The selected source exceeds the {MaximumSourceSize / 1024 / 1024} MB limit.");
+        }
+
+        var initialCapacity = sourceSize.HasValue
+            && sourceSize.Value > 0
+            && sourceSize.Value <= int.MaxValue
+                ? (int)sourceSize.Value
+                : 0;
+        using var content = new MemoryStream(initialCapacity);
+        await source.CopyToAsync(content);
+        if (content.Length > MaximumSourceSize)
+        {
+            throw new InvalidOperationException($"The selected source exceeds the {MaximumSourceSize / 1024 / 1024} MB limit.");
+        }
+
+        content.Position = 0;
+        var importer = ImporterFactory.CreateFor(fileName);
+        _source = await importer.ImportAsync(new EosImportRequest(fileName, content));
     }
 
     private async Task RefreshWorkspacesAsync()
@@ -336,7 +358,7 @@
                     CueListName = _cueListName.Trim(),
                     NetworkPatchName = _networkPatchName.Trim(),
                     SceneTextMode = _sceneMode,
-                    SkipCueAfterFollowOrHang = _skipCueAfterFollowOrHang,
+                    FollowedCueMode = _followedCueMode,
                     ConflictPolicy = hasConflict
                         ? CueListConflictPolicy.ReplaceWithExplicitConsent
                         : CueListConflictPolicy.Fail,

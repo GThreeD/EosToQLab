@@ -109,13 +109,13 @@ public sealed class QLabOscSession : IQLabOscSession
 
     public Task SetNetworkParameterAsync(
         string cueId,
-        QLabNetworkParameter parameter,
+        int parameterIndex,
         string value,
         CancellationToken cancellationToken = default)
     {
         return SetCuePropertyByProtocolNameAsync(
             cueId,
-            QLabProtocol.NetworkParameterProperty(parameter),
+            QLabProtocol.NetworkParameterProperty(parameterIndex),
             value,
             cancellationToken);
     }

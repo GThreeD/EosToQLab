@@ -1,13 +1,11 @@
-using EosToQLab.Core.Exceptions;
-
 namespace EosToQLab.Infrastructure.QLab.Osc;
 
 internal static class SlipCodec
 {
-    private const byte End = 0xC0;
-    private const byte Escape = 0xDB;
-    private const byte EscapedEnd = 0xDC;
-    private const byte EscapedEscape = 0xDD;
+    internal const byte End = 0xC0;
+    internal const byte Escape = 0xDB;
+    internal const byte EscapedEnd = 0xDC;
+    internal const byte EscapedEscape = 0xDD;
 
     public static byte[] Frame(ReadOnlySpan<byte> payload)
     {
@@ -34,51 +32,4 @@ internal static class SlipCodec
         return stream.ToArray();
     }
 
-    public static async Task<byte[]> ReadFrameAsync(Stream stream, CancellationToken cancellationToken)
-    {
-        var payload = new List<byte>();
-        var escaped = false;
-        var started = false;
-        var buffer = new byte[1];
-
-        while (true)
-        {
-            var read = await stream.ReadAsync(buffer, cancellationToken);
-            if (read == 0) throw new QLabConnectionClosedException();
-
-            var value = buffer[0];
-            if (value == End)
-            {
-                if (!started || payload.Count == 0)
-                {
-                    started = true;
-                    escaped = false;
-                    payload.Clear();
-                    continue;
-                }
-
-                return payload.ToArray();
-            }
-
-            started = true;
-            if (escaped)
-            {
-                payload.Add(value switch
-                {
-                    EscapedEnd => End,
-                    EscapedEscape => Escape,
-                    _ => throw new QLabSlipFrameException(value)
-                });
-                escaped = false;
-            }
-            else if (value == Escape)
-            {
-                escaped = true;
-            }
-            else
-            {
-                payload.Add(value);
-            }
-        }
-    }
 }

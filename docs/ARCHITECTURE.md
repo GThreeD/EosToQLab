@@ -44,7 +44,7 @@ Contains implementation details:
 A macOS-only .NET MAUI Blazor Hybrid application. Razor components handle the workflow:
 
 ```text
-select/drop source
+select source with native file picker
     -> importer factory
     -> normalized cue preview
     -> select already-open QLab workspace
@@ -82,8 +82,7 @@ After parsing and cue-part aggregation, source rows are mapped into `EosCue`. ES
 - `QLabMemoCuePlan`, using only EOS scene text as the Memo name and no generated notes;
 - `QLabNetworkCuePlan`, using only the EOS label as its name and EOS cue notes as its notes.
 
-Follow/Hang state is tracked per EOS cue-list number. The state is updated for every EOS cue, including a cue that is
-skipped because the previous cue had Follow/Hang. This prevents the permanent-block bug from the original AppleScript.
+Follow/Hang state is tracked per EOS cue-list number. The state is updated for every EOS cue, including an automatically triggered cue that is excluded from the plan. This preserves complete chains such as 83.1 → 83.2 → 83.3 → 84. The selected `FollowedCueImportMode` either omits 83.2 through 84 or keeps their Network cues with `Armed = false`.
 
 ## QLab execution layers
 
@@ -104,8 +103,9 @@ addresses or know QLab property strings.
 Each plan-item mapper converts one plan type into a declarative `QLabCueCreationRequest`. Adding a new plan-item type
 requires a new mapper registration rather than modifying a central switch statement.
 
-`QLabOscSession` contains the direct, connection-bound QLab operations. `QLabProtocol` is the single translation point
-from typed enums such as `QLabCueProperty.NetworkPatchId` to QLab's OSC names such as `networkPatchID`.
+`QLabEosNetworkCommand` models QLab's visible EOS Network-cue parameter stack. It emits ordered assignments for Type, Specify user, optional User, Command, and command-specific values. The OSC session receives only the resulting visible parameter index and value; it does not contain EOS workflow rules. Target and command values are string-backed so future menu entries remain additive.
+
+`QLabOscSession` contains the direct, connection-bound QLab operations. `QLabProtocol` is the single translation point from typed enums such as `QLabCueProperty.NetworkPatchId` to QLab's OSC names such as `networkPatchID`.
 
 ## QLab transport
 

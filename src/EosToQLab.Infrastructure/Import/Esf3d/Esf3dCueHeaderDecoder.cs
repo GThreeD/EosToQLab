@@ -52,12 +52,102 @@ internal static class Esf3dCueHeaderDecoder
         }
 
         int? cueNotesOffset = IsTextValue(data, offset, recordEnd) ? offset : null;
+        
+        var continuationSearchStart = offset;
+        if (cueNotesOffset is not null
+            && TryReadText(data, offset, recordEnd, out _, out var cueNotesEnd))
+        {
+            continuationSearchStart = cueNotesEnd;
+        }
+        else if (offset < recordEnd && data[offset] is 0x00 or 0x04)
+        {
+            continuationSearchStart = offset + 1;
+        }
+
+        // Current EOS show files store follow/hang timing in a later continuation object,
+        // not in the legacy metadata slot used by older/synthetic fixtures.
+        if (follow is null
+            && TryFindContinuationObject(
+                data,
+                continuationSearchStart,
+                recordEnd,
+                out var continuationFollow))
+        {
+            follow = continuationFollow;
+        }
+        
         return new Esf3dCueHeaderDecodeResult(
             true,
             follow,
             false,
             cueNotesOffset,
             followTextOffset);
+    }
+
+    private static bool TryFindContinuationObject(
+        byte[] data,
+        int start,
+        int end,
+        out string? value)
+    {
+        value = null;
+
+        // Observed EOS continuation object (values are tagged):
+        // object, bool, 1, bool(mode), 1, milliseconds, null, 1, ...
+        // The second boolean selects Follow (false) vs Hang (true). Some EOS versions
+        // appear to duplicate mode state, so either boolean being true is treated as Hang.
+        for (var candidate = start; candidate < end; candidate++)
+        {
+            if (data[candidate] != 0x02)
+            {
+                continue;
+            }
+
+            var offset = candidate + 1;
+            if (!TryReadBoolean(data, ref offset, end, out var firstModeFlag)
+                || !TryReadUnsigned(data, offset, end, out var firstMarker, out offset)
+                || firstMarker != 1
+                || !TryReadBoolean(data, ref offset, end, out var secondModeFlag)
+                || !TryReadUnsigned(data, offset, end, out var secondMarker, out offset)
+                || secondMarker != 1
+                || !TryReadUnsigned(data, offset, end, out var milliseconds, out offset)
+                || milliseconds <= 0
+                || milliseconds > 86_400_000
+                || offset >= end
+                || data[offset] != 0x04)
+            {
+                continue;
+            }
+
+            offset++;
+            if (!TryReadUnsigned(data, offset, end, out var trailerMarker, out _)
+                || trailerMarker != 1)
+            {
+                continue;
+            }
+
+            value = FormatFollowOrHang(firstModeFlag || secondModeFlag, milliseconds);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadBoolean(
+        byte[] data,
+        ref int offset,
+        int end,
+        out bool value)
+    {
+        value = false;
+        if (offset + 1 >= end || data[offset] != 0x01)
+        {
+            return false;
+        }
+
+        value = data[offset + 1] != 0;
+        offset += 2;
+        return true;
     }
 
     private static bool TryReadFollow(

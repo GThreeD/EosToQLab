@@ -22,15 +22,6 @@ public enum QLabWorkspaceProperty
     CurrentCueListId
 }
 
-public enum QLabNetworkParameter
-{
-    Category,
-    Action,
-    Description,
-    CueListNumber,
-    CueNumber
-}
-
 internal static class QLabProtocol
 {
     internal static class Addresses
@@ -109,22 +100,10 @@ internal static class QLabProtocol
         };
     }
 
-    internal static int NetworkParameterIndex(QLabNetworkParameter parameter)
+    internal static string NetworkParameterProperty(int parameterIndex)
     {
-        return parameter switch
-        {
-            QLabNetworkParameter.Category => 0,
-            QLabNetworkParameter.Action => 1,
-            QLabNetworkParameter.Description => 2,
-            QLabNetworkParameter.CueListNumber => 3,
-            QLabNetworkParameter.CueNumber => 4,
-            _ => throw new ArgumentOutOfRangeException(nameof(parameter), parameter, null)
-        };
-    }
-
-    internal static string NetworkParameterProperty(QLabNetworkParameter parameter)
-    {
-        return $"parameterValue/{NetworkParameterIndex(parameter)}";
+        ArgumentOutOfRangeException.ThrowIfNegative(parameterIndex);
+        return $"parameterValue/{parameterIndex}";
     }
 
     internal static bool IsEosNetworkPatchType(string? patchType)
@@ -132,11 +111,4 @@ internal static class QLabProtocol
         return string.IsNullOrWhiteSpace(patchType)
                || patchType.Contains("eos", StringComparison.OrdinalIgnoreCase);
     }
-}
-
-internal static class QLabEosNetworkCommand
-{
-    internal const string Category = "Cues";
-    internal const string Action = "No";
-    internal const string Description = "Run cue in specific list";
 }

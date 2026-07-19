@@ -7,7 +7,8 @@ public sealed record QLabCuePropertyAssignment(
     object? Value);
 
 public sealed record QLabNetworkParameterAssignment(
-    QLabNetworkParameter Parameter,
+    int Index,
+    QLabEosParameter Parameter,
     string Value);
 
 public sealed record QLabCueCreationRequest(

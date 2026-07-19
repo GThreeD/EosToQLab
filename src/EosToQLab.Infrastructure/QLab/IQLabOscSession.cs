@@ -34,7 +34,7 @@ public interface IQLabOscSession : IAsyncDisposable
 
     Task SetNetworkParameterAsync(
         string cueId,
-        QLabNetworkParameter parameter,
+        int parameterIndex,
         string value,
         CancellationToken cancellationToken = default);
 

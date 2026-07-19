@@ -16,8 +16,11 @@ The self-test console project has no external test-framework dependency. It chec
 - cue-part aggregation;
 - fixed scene-text, label, and cue-notes mapping;
 - the synthetic ESF3D fixture, including cue notes and Follow/Hang;
-- corrected Follow/Hang planning behavior;
-- scene Memo-cue de-duplication and empty Memo notes.
+- current ESF3D continuation-object decoding and complete Follow/Hang chains;
+- both Follow/Hang policies: exclude and import disarmed;
+- scene Memo-cue de-duplication and empty Memo notes;
+- the ordered EOS Network-cue parameter stack, including the optional User field;
+- exact QLab number attempts and conflict fallback to an unnumbered cue.
 
 ```bash
 dotnet run --project tests/EosToQLab.SelfTests/EosToQLab.SelfTests.csproj -c Release
@@ -52,3 +55,6 @@ dotnet build src/EosToQLab.App/EosToQLab.App.csproj \
 8. Check Memo cues, Network-cue names, patch assignment, and parameter values.
 9. Test with an incorrect OSC passcode and verify `QLabAccessDeniedException`.
 10. Test without an open workspace and verify `QLabNoOpenWorkspaceException`.
+11. Load the supplied Follow-chain sample and verify both dropdown modes: exclusion removes 83.2, 83.3, and 84; disarmed mode creates them with Armed off.
+12. Use the native source button and confirm that both `.csv` and `.esf3d` files are selectable.
+13. Inspect one generated EOS Network cue: Type `Cues`, Specify user `No`, Command `Run cue in specific list`, then the expected List and Cue values.
