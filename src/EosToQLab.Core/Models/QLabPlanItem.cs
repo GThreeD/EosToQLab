@@ -10,4 +10,6 @@ public sealed record QLabNetworkCuePlan(
 
 public sealed record QLabMemoCuePlan(
     string Name,
-    string? Notes) : QLabPlanItem;
+    string? Notes,
+    bool Armed = false,
+    bool SkipIfDisarmed = true) : QLabPlanItem;

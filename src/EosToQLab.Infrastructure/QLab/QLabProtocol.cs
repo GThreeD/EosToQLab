@@ -12,6 +12,8 @@ public enum QLabCueProperty
     Name,
     Number,
     Notes,
+    Armed,
+    SkipIfDisarmed,
     NetworkPatchId
 }
 
@@ -79,6 +81,8 @@ internal static class QLabProtocol
         QLabCueProperty.Name => "name",
         QLabCueProperty.Number => "number",
         QLabCueProperty.Notes => "notes",
+        QLabCueProperty.Armed => "armed",
+        QLabCueProperty.SkipIfDisarmed => "skipIfDisarmed",
         QLabCueProperty.NetworkPatchId => "networkPatchID",
         _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
     };

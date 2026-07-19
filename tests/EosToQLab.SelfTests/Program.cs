@@ -127,6 +127,12 @@ static Task TestMemoMapperAsync()
     Assert(request.CueProperties.Any(property =>
         property.Property == QLabCueProperty.Number
         && Equals(property.Value, string.Empty)), "Memo number reset is missing.");
+    Assert(request.CueProperties.Any(property =>
+        property.Property == QLabCueProperty.Armed
+        && Equals(property.Value, false)), "Memo cue should be disarmed.");
+    Assert(request.CueProperties.Any(property =>
+        property.Property == QLabCueProperty.SkipIfDisarmed
+        && Equals(property.Value, true)), "Memo cue should be skipped when disarmed.");
     Assert(request.NetworkParameters.Count == 0, "Memo mapping created network parameters.");
     return Task.CompletedTask;
 }
