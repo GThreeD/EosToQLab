@@ -117,6 +117,7 @@
                 <option value="@SceneTextImportMode.Ignore">Ignore</option>
                 <option value="@SceneTextImportMode.MemoCue">Create memo cues</option>
             </select>
+            <small>Memo cues remain unnumbered. Network cues receive exactly the EOS cue number when that number is available in QLab.</small>
         </label>
     </div>
 
@@ -129,7 +130,7 @@
     {
         <div class="conflict-box">
             <strong>A cue list named “@_cueListName” already exists.</strong>
-            <p>Replacement deletes only that matching list after the new temporary list has been built successfully.</p>
+            <p>Replacement deletes only that matching list after the new temporary list has been built successfully. Network cue numbers are assigned afterwards, so they can reuse the EOS numbers released by the replaced list; numbers still used elsewhere remain blank.</p>
             <label>
                 <input type="checkbox" @bind="_replacementConsent" disabled="@_busy" />
                 I explicitly approve replacing the existing cue list.

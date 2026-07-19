@@ -1,4 +1,5 @@
 using EosToQLab.Core.Diagnostics;
+using EosToQLab.Core.Exceptions;
 using EosToQLab.Core.Import;
 using EosToQLab.Core.Models;
 using EosToQLab.Core.Planning;
@@ -15,8 +16,12 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("Synthetic ESF3D maps into the common cue model", TestEsf3dAsync),
     ("Follow/hang skips exactly one following cue", TestFollowLogicAsync),
     ("Scene text creates memo cues without duplication", TestSceneTextAsync),
+    ("Plans always request the exact EOS cue number", TestDesiredNumberingAsync),
+    ("Duplicate EOS cue numbers are attempted independently", TestDuplicateDesiredNumberingAsync),
     ("Memo plan maps to declarative QLab properties", TestMemoMapperAsync),
-    ("Network plan maps to properties and network parameters", TestNetworkMapperAsync)
+    ("Network plan maps to properties and network parameters", TestNetworkMapperAsync),
+    ("Rejected QLab numbers leave cues unnumbered", TestRejectedNumberLeavesBlankAsync),
+    ("Available QLab numbers use the exact EOS number", TestSuccessfulNumberAssignmentAsync)
 };
 
 var failures = new List<string>();
@@ -128,6 +133,41 @@ static Task TestSceneTextAsync()
         "Network cue names must contain only the EOS label.");
     Assert(networkCues[0].Notes == "Note A" && networkCues[1].Notes is null && networkCues[2].Notes == "Note C",
         "Network cue notes must contain only EOS cue notes.");
+    Assert(networkCues.Select(cue => cue.QLabNumber).SequenceEqual(["1", "2", "3"]),
+        "Every network cue must retain its EOS cue number as the desired QLab number.");
+    return Task.CompletedTask;
+}
+
+static Task TestDesiredNumberingAsync()
+{
+    var cues = new[]
+    {
+        Cue(0, "1", listNumber: 1),
+        Cue(1, "2.5", listNumber: 2)
+    };
+    var plan = new QLabImportPlanBuilder().Build(cues, Options());
+    var networkCues = plan.Items.OfType<QLabNetworkCuePlan>().ToArray();
+
+    Assert(networkCues.Select(cue => cue.QLabNumber).SequenceEqual(["1", "2.5"]),
+        "QLab numbers must always be requested exactly as they appear in EOS.");
+    return Task.CompletedTask;
+}
+
+static Task TestDuplicateDesiredNumberingAsync()
+{
+    var cues = new[]
+    {
+        Cue(0, "1", listNumber: 1),
+        Cue(1, "1", listNumber: 2),
+        Cue(2, "2", listNumber: 2)
+    };
+    var plan = new QLabImportPlanBuilder().Build(cues, Options());
+    var networkCues = plan.Items.OfType<QLabNetworkCuePlan>().ToArray();
+
+    Assert(networkCues.Select(cue => cue.QLabNumber).SequenceEqual(["1", "1", "2"]),
+        "Duplicate EOS cue numbers must still be attempted individually in QLab.");
+    Assert(networkCues[1].ListNumber == "2" && networkCues[1].CueNumber == "1",
+        "QLab number handling must not change the EOS network command parameters.");
     return Task.CompletedTask;
 }
 
@@ -141,9 +181,8 @@ static Task TestMemoMapperAsync()
     Assert(request.CueProperties.Any(property =>
         property.Property == QLabCueProperty.Name
         && Equals(property.Value, "Scene A")), "Memo name property is missing.");
-    Assert(request.CueProperties.Any(property =>
-        property.Property == QLabCueProperty.Number
-        && Equals(property.Value, string.Empty)), "Memo number reset is missing.");
+    Assert(request.CueProperties.All(property =>
+        property.Property != QLabCueProperty.Number), "Memo mapping must not set an empty QLab number.");
     Assert(request.CueProperties.Any(property =>
         property.Property == QLabCueProperty.Armed
         && Equals(property.Value, false)), "Memo cue should be disarmed.");
@@ -158,7 +197,7 @@ static Task TestNetworkMapperAsync()
 {
     var patch = new QLabNetworkPatch("patch-id", "EOS", "eos");
     var request = new QLabNetworkCuePlanMapper().Map(
-        new QLabNetworkCuePlan("LX 1/2", "1", "2", "Notes"),
+        new QLabNetworkCuePlan("LX 1/2", "1", "2", "2", "Notes"),
         new QLabPlanExecutionContext(patch));
 
     Assert(request.CueType == QLabCueType.Network, "Network cue type was not mapped.");
@@ -166,6 +205,11 @@ static Task TestNetworkMapperAsync()
     Assert(request.CueProperties.Any(property =>
         property.Property == QLabCueProperty.NetworkPatchId
         && Equals(property.Value, patch.Id)), "Network patch property is missing.");
+    Assert(request.CueProperties.All(property =>
+        property.Property != QLabCueProperty.Number),
+        "The mapper must defer QLab number assignment until all cues are unnumbered.");
+    Assert(request.DesiredCueNumber == "2",
+        "The desired QLab number must equal the EOS cue number exactly.");
     Assert(request.NetworkParameters.Any(parameter =>
         parameter.Parameter == QLabNetworkParameter.CueListNumber
         && parameter.Value == "1"), "Cue-list parameter is missing.");
@@ -175,16 +219,73 @@ static Task TestNetworkMapperAsync()
     return Task.CompletedTask;
 }
 
+static async Task TestRejectedNumberLeavesBlankAsync()
+{
+    var patch = new QLabNetworkPatch("patch-id", "EOS", "eos");
+    await using var session = new TrackingNumberSession(patch.Id, rejectedNumbers: ["1"]);
+    var executor = new QLabImportPlanExecutor([new QLabNetworkCuePlanMapper()]);
+    var plan = new QLabImportPlan(
+    [
+        new QLabNetworkCuePlan("LX 1", "1", "1", "1", null)
+    ]);
+
+    var result = await executor.ExecuteAsync(
+        session,
+        plan,
+        new QLabPlanExecutionContext(patch));
+    var assignedCount = await QLabImportPlanExecutor.AssignCueNumbersAsync(
+        session,
+        result.PendingCueNumbers);
+
+    Assert(session.NumberWrites.SequenceEqual(["", "1"]),
+        "The cue must be cleared first and then receive exactly one EOS-number attempt.");
+    Assert(assignedCount == 0,
+        "A rejected QLab number must not be counted as assigned.");
+    Assert(session.CurrentNumber == string.Empty,
+        "A conflicting EOS cue number must leave the QLab cue unnumbered.");
+    Assert(!session.NumberWrites.Any(value => value == "2"),
+        "The importer must never increment a conflicting QLab cue number.");
+    Assert(session.NetworkParameters.Count == 5,
+        "Network parameters were not applied before number assignment.");
+}
+
+static async Task TestSuccessfulNumberAssignmentAsync()
+{
+    var patch = new QLabNetworkPatch("patch-id", "EOS", "eos");
+    await using var session = new TrackingNumberSession(patch.Id);
+    var executor = new QLabImportPlanExecutor([new QLabNetworkCuePlanMapper()]);
+    var plan = new QLabImportPlan(
+    [
+        new QLabNetworkCuePlan("LX 7.5", "2", "7.5", "7.5", null)
+    ]);
+
+    var result = await executor.ExecuteAsync(
+        session,
+        plan,
+        new QLabPlanExecutionContext(patch));
+    var assignedCount = await QLabImportPlanExecutor.AssignCueNumbersAsync(
+        session,
+        result.PendingCueNumbers);
+
+    Assert(session.NumberWrites.SequenceEqual(["", "7.5"]),
+        "QLab must receive only the exact EOS cue number after the initial clear.");
+    Assert(session.CurrentNumber == "7.5",
+        "An available QLab cue number must equal the EOS cue number.");
+    Assert(assignedCount == 1,
+        "A successful exact EOS number must be counted for rollback.");
+}
+
 static EosCue Cue(
     int order,
     string number,
     string? label = null,
     string? notes = null,
     string? follow = null,
-    string? scene = null) => new()
+    string? scene = null,
+    int listNumber = 1) => new()
 {
     SourceOrder = order,
-    ListNumber = 1,
+    ListNumber = listNumber,
     CueNumber = number,
     Label = label,
     CueNotes = notes,
@@ -207,4 +308,99 @@ static void Assert(bool condition, string message)
     {
         throw new InvalidOperationException(message);
     }
+}
+
+sealed class TrackingNumberSession : IQLabOscSession
+{
+    private readonly string _patchId;
+    private readonly HashSet<string> _rejectedNumbers;
+
+    public TrackingNumberSession(string patchId, IEnumerable<string>? rejectedNumbers = null)
+    {
+        _patchId = patchId;
+        _rejectedNumbers = rejectedNumbers?.ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public QLabWorkspace Workspace { get; } = new("workspace", "Test", null);
+    public List<QLabCueProperty> SetProperties { get; } = [];
+    public List<QLabNetworkParameter> NetworkParameters { get; } = [];
+    public List<string> NumberWrites { get; } = [];
+    public string CurrentNumber { get; private set; } = "auto-1";
+
+    public Task<string> CreateCueAsync(
+        QLabCueType cueType,
+        string cueName,
+        CancellationToken cancellationToken = default) => Task.FromResult("cue-id");
+
+    public Task SetCuePropertyAsync(
+        string cueId,
+        QLabCueProperty property,
+        object? value,
+        CancellationToken cancellationToken = default)
+    {
+        if (property == QLabCueProperty.Number)
+        {
+            var number = value?.ToString() ?? string.Empty;
+            NumberWrites.Add(number);
+            if (number.Length > 0 && _rejectedNumbers.Contains(number))
+            {
+                throw new QLabUnexpectedReplyException(
+                    "/reply/workspace/workspace/cue_id/cue-id/number",
+                    "{\"status\":\"error\"}");
+            }
+
+            CurrentNumber = number;
+            return Task.CompletedTask;
+        }
+
+        SetProperties.Add(property);
+        return Task.CompletedTask;
+    }
+
+    public Task SetNetworkParameterAsync(
+        string cueId,
+        QLabNetworkParameter parameter,
+        string value,
+        CancellationToken cancellationToken = default)
+    {
+        NetworkParameters.Add(parameter);
+        return Task.CompletedTask;
+    }
+
+    public Task<string?> QueryCuePropertyAsync(
+        string cueId,
+        QLabCueProperty property,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<string?>(property == QLabCueProperty.NetworkPatchId
+            ? _patchId
+            : property == QLabCueProperty.Number
+                ? CurrentNumber
+                : null);
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+    public Task<IReadOnlyList<QLabCueList>> GetCueListsAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<QLabNetworkPatch> FindNetworkPatchAsync(string patchName, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<string?> GetCurrentCueListIdAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task SetWorkspacePropertyAsync(QLabWorkspaceProperty property, object? value, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task RenameCueListAsync(string cueListId, string currentName, string targetName, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task DeleteCueListAsync(string cueListId, string cueListName, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task SaveWorkspaceAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task UndoAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
 }

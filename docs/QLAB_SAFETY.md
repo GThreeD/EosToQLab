@@ -28,10 +28,11 @@ For a non-conflicting name:
 
 1. create a cue list with a unique temporary name;
 2. make it current;
-3. create every Memo and Network cue;
+3. create every Memo and Network cue and clear any automatically assigned QLab number;
 4. verify Network Patch assignment for each Network cue;
 5. rename the list to the final name and read the name back for verification;
-6. save only after all previous steps succeed, if requested.
+6. assign each Network cue exactly its EOS cue number, leaving it unnumbered if QLab reports a conflict;
+7. save only after all previous steps succeed, if requested.
 
 On failure, the previous current cue list is restored and the temporary list is deleted.
 
@@ -44,13 +45,14 @@ For an explicitly approved conflict:
 3. rename the new list to the requested name and verify the rename;
 4. when automatic saving is enabled, save a recoverable state containing both lists;
 5. delete the backup list and verify that its ID is no longer present;
-6. save the final state.
+6. assign each Network cue exactly its EOS cue number, leaving it unnumbered if the number is still used elsewhere in the workspace;
+7. save the final state.
 
 The old list is therefore not deleted until the new list has been completely populated.
 
 ## Rollback
 
-If replacement fails after the old list was deleted, the service first requests QLab workspace undo. It then:
+If replacement fails after the old list was deleted, the service first undoes any successful post-deletion cue-number assignments and then requests one additional QLab workspace undo to restore the deleted list. It then:
 
 - gives the failed new list a unique non-conflicting name;
 - restores the old list name;

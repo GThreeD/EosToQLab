@@ -33,6 +33,7 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
                     NullToEmpty(cue.Label),
                     cue.ListNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     cue.CueNumber,
+                    cue.CueNumber,
                     NullIfWhiteSpace(cue.CueNotes)));
             }
 

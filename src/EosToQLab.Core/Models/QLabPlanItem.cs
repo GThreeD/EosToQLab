@@ -6,6 +6,7 @@ public sealed record QLabNetworkCuePlan(
     string Name,
     string ListNumber,
     string CueNumber,
+    string? QLabNumber,
     string? Notes) : QLabPlanItem;
 
 public sealed record QLabMemoCuePlan(

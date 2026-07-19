@@ -11,7 +11,6 @@ public sealed class QLabNetworkCuePlanMapper : QLabPlanItemMapper<QLabNetworkCue
         var properties = new List<QLabCuePropertyAssignment>
         {
             new(QLabCueProperty.Name, item.Name),
-            new(QLabCueProperty.Number, item.CueNumber),
             new(QLabCueProperty.NetworkPatchId, context.NetworkPatch.Id)
         };
 
@@ -31,6 +30,7 @@ public sealed class QLabNetworkCuePlanMapper : QLabPlanItemMapper<QLabNetworkCue
                 new QLabNetworkParameterAssignment(QLabNetworkParameter.CueListNumber, item.ListNumber),
                 new QLabNetworkParameterAssignment(QLabNetworkParameter.CueNumber, item.CueNumber)
             ],
-            context.NetworkPatch);
+            context.NetworkPatch,
+            item.QLabNumber);
     }
 }

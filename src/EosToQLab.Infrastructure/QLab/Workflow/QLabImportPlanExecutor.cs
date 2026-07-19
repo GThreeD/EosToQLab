@@ -24,7 +24,7 @@ public sealed class QLabImportPlanExecutor
         _mappers = mapperList.ToDictionary(mapper => mapper.PlanItemType);
     }
 
-    public async Task ExecuteAsync(
+    public async Task<QLabPlanExecutionResult> ExecuteAsync(
         IQLabOscSession session,
         QLabImportPlan plan,
         QLabPlanExecutionContext context,
@@ -33,6 +33,8 @@ public sealed class QLabImportPlanExecutor
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(context);
+
+        var pendingCueNumbers = new List<QLabPendingCueNumberAssignment>();
 
         foreach (var item in plan.Items)
         {
@@ -44,11 +46,66 @@ public sealed class QLabImportPlanExecutor
             }
 
             var request = mapper.Map(item, context);
-            await ExecuteCueRequestAsync(session, request, cancellationToken);
+            var pendingCueNumber = await ExecuteCueRequestAsync(
+                session,
+                request,
+                cancellationToken);
+            if (pendingCueNumber is not null)
+            {
+                pendingCueNumbers.Add(pendingCueNumber);
+            }
+        }
+
+        return new QLabPlanExecutionResult(pendingCueNumbers);
+    }
+
+    public static async Task<int> AssignCueNumbersAsync(
+        IQLabOscSession session,
+        IReadOnlyList<QLabPendingCueNumberAssignment> assignments,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(assignments);
+
+        var successfulAssignments = 0;
+        try
+        {
+            foreach (var assignment in assignments)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    await session.SetCuePropertyAsync(
+                        assignment.CueId,
+                        QLabCueProperty.Number,
+                        assignment.DesiredCueNumber,
+                        cancellationToken);
+                    successfulAssignments++;
+                }
+                catch (QLabUnexpectedReplyException)
+                {
+                    // The cue was cleared before this phase. A rejected EOS number is
+                    // therefore left blank; no incremented fallback is ever generated.
+                }
+            }
+
+            return successfulAssignments;
+        }
+        catch
+        {
+            // Keep the workflow rollback boundary directly after cue-list deletion.
+            // Undo only number assignments that succeeded before the fatal failure.
+            for (var index = 0; index < successfulAssignments; index++)
+            {
+                await session.UndoAsync(CancellationToken.None);
+            }
+
+            throw;
         }
     }
 
-    private static async Task ExecuteCueRequestAsync(
+    private static async Task<QLabPendingCueNumberAssignment?> ExecuteCueRequestAsync(
         IQLabOscSession session,
         QLabCueCreationRequest request,
         CancellationToken cancellationToken)
@@ -58,6 +115,14 @@ public sealed class QLabImportPlanExecutor
             var cueId = await session.CreateCueAsync(
                 request.CueType,
                 request.Name,
+                cancellationToken);
+
+            // QLab may automatically number newly created cues. Clear that value first,
+            // so a rejected EOS number never leaves an incremented fallback number behind.
+            await session.SetCuePropertyAsync(
+                cueId,
+                QLabCueProperty.Number,
+                string.Empty,
                 cancellationToken);
 
             foreach (var assignment in request.CueProperties)
@@ -94,6 +159,13 @@ public sealed class QLabImportPlanExecutor
                         request.ExpectedNetworkPatch.Name);
                 }
             }
+
+            return string.IsNullOrWhiteSpace(request.DesiredCueNumber)
+                ? null
+                : new QLabPendingCueNumberAssignment(
+                    cueId,
+                    request.Name,
+                    request.DesiredCueNumber);
         }
         catch (EosToQLabException)
         {

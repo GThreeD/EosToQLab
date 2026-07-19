@@ -15,6 +15,16 @@ public sealed record QLabCueCreationRequest(
     string Name,
     IReadOnlyList<QLabCuePropertyAssignment> CueProperties,
     IReadOnlyList<QLabNetworkParameterAssignment> NetworkParameters,
-    QLabNetworkPatch? ExpectedNetworkPatch = null);
+    QLabNetworkPatch? ExpectedNetworkPatch = null,
+    string? DesiredCueNumber = null);
 
-public sealed record QLabPlanExecutionContext(QLabNetworkPatch NetworkPatch);
+public sealed record QLabPlanExecutionContext(
+    QLabNetworkPatch NetworkPatch);
+
+public sealed record QLabPendingCueNumberAssignment(
+    string CueId,
+    string CueName,
+    string DesiredCueNumber);
+
+public sealed record QLabPlanExecutionResult(
+    IReadOnlyList<QLabPendingCueNumberAssignment> PendingCueNumbers);

@@ -16,6 +16,7 @@ The application does not export an intermediate file and does not use AppleScrip
 - Only lists and targets QLab workspaces that are already open.
 - Never creates, opens, or saves-as a new QLab document.
 - Creates a separate temporary cue list before touching an existing list.
+- Creates imported cues without a QLab number first, then assigns each Network cue exactly its EOS cue number. If that number is already used elsewhere in the workspace, the QLab cue stays unnumbered; the importer never increments or invents a replacement number. The EOS list/cue values sent by the Network cue are unchanged.
 - Rejects a duplicate cue-list name by default.
 - Allows replacement only after explicit confirmation in the UI and a second enforcement check in the QLab service.
 - Maps EOS scene text to QLab Memo-cue names; generated Memo notes stay empty.
@@ -115,7 +116,8 @@ For an explicitly approved replacement, the service:
 3. renames the new list to the requested final name;
 4. optionally saves a recoverable state containing both lists;
 5. deletes the backup list;
-6. optionally saves the final state.
+6. assigns each Network cue exactly its EOS cue number when that number is now free;
+7. optionally saves the final state.
 
 If a later step fails, the service attempts to restore the old name, restore the previous current cue list, remove the temporary import, and save the rollback where necessary.
 

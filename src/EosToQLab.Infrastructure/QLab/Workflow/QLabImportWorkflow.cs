@@ -48,6 +48,7 @@ public sealed class QLabImportWorkflow(
         string? conflictBackupName = null;
         var conflictRenamed = false;
         var conflictDeleted = false;
+        var assignedCueNumberCount = 0;
         var preDeletionSaveCompleted = false;
 
         try
@@ -67,7 +68,7 @@ public sealed class QLabImportWorkflow(
                 temporaryCueListId,
                 cancellationToken);
 
-            await planExecutor.ExecuteAsync(
+            var executionResult = await planExecutor.ExecuteAsync(
                 session,
                 plan,
                 new QLabPlanExecutionContext(networkPatch),
@@ -110,6 +111,11 @@ public sealed class QLabImportWorkflow(
                 conflictDeleted = true;
             }
 
+            assignedCueNumberCount = await QLabImportPlanExecutor.AssignCueNumbersAsync(
+                session,
+                executionResult.PendingCueNumbers,
+                cancellationToken);
+
             if (options.SaveWorkspaceAfterImport)
             {
                 await session.SaveWorkspaceAsync(cancellationToken);
@@ -128,6 +134,11 @@ public sealed class QLabImportWorkflow(
             {
                 if (conflictDeleted)
                 {
+                    for (var index = 0; index < assignedCueNumberCount; index++)
+                    {
+                        await session.UndoAsync(CancellationToken.None);
+                    }
+
                     await session.UndoAsync(CancellationToken.None);
                 }
 
