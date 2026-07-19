@@ -21,14 +21,14 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
         foreach (var cue in cues.OrderBy(cue => cue.SourceOrder))
         {
             var isFollowedCue = triggeredByPreviousCue.GetValueOrDefault(cue.ListNumber);
-            var excludeCue = isFollowedCue
+            var excludeFollowedCue = isFollowedCue
                 && options.FollowedCueMode == FollowedCueImportMode.Exclude;
 
-            if (excludeCue)
+            if (cue.ImportEnabled && excludeFollowedCue)
             {
                 diagnostics?.Add(new CueSkippedAfterFollowOrHangWarning(cue.DisplayCueNumber));
             }
-            else
+            else if (cue.ImportEnabled)
             {
                 var importDisarmed = isFollowedCue
                     && options.FollowedCueMode == FollowedCueImportMode.ImportDisarmed;
@@ -48,8 +48,8 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
                     Armed: !importDisarmed));
             }
 
-            // This is deliberately updated even when the cue itself is excluded. A chain such as
-            // 83.1 -> 83.2 -> 83.3 -> 84 must remain a chain while the plan is being filtered.
+            // Follow/hang state is based on the complete EOS sequence, including cues manually
+            // deselected in the preview. This keeps later automatic cues classified correctly.
             triggeredByPreviousCue[cue.ListNumber] = cue.HasFollowOrHang;
         }
 

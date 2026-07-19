@@ -9,8 +9,7 @@ public interface IQLabOscSession : IAsyncDisposable
     Task<IReadOnlyList<QLabCueList>> GetCueListsAsync(
         CancellationToken cancellationToken = default);
 
-    Task<QLabNetworkPatch> FindNetworkPatchAsync(
-        string patchName,
+    Task<IReadOnlyList<QLabNetworkPatch>> GetNetworkPatchesAsync(
         CancellationToken cancellationToken = default);
 
     Task<string?> GetCurrentCueListIdAsync(

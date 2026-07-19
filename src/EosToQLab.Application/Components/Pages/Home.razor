@@ -2,6 +2,8 @@
 
 @inject IEosCueImporterFactory ImporterFactory
 @inject IQLabService QLabService
+@inject IQLabPasscodeStore PasscodeStore
+@inject IJSRuntime JS
 
 <PageTitle>EosToQLab</PageTitle>
 
@@ -9,7 +11,7 @@
     <div>
         <div class="eyebrow">Import workflow</div>
         <h1>Build a protected QLab cue list from EOS</h1>
-        <p>Choose an EOS CSV or ESF3D file, review the parsed cues, and import them into a workspace that is already open in QLab 5.</p>
+        <p>Choose an EOS CSV or ESF3D file, review and edit the parsed cues, and import them into a workspace that is already open in QLab 5.</p>
     </div>
     <div class="status-pill @(_busy ? "working" : "ready")">
         @(_busy ? "Working…" : "Ready")
@@ -57,8 +59,8 @@
                     <strong>@_source.SourceKind</strong>
                 </div>
                 <div>
-                    <span class="label">Cues</span>
-                    <strong>@_source.Cues.Count</strong>
+                    <span class="label">Selected</span>
+                    <strong>@SelectedCueCount / @_previewRows.Count</strong>
                 </div>
             </div>
         }
@@ -77,7 +79,7 @@
 
         <label class="field">
             <span>Workspace</span>
-            <select @bind="SelectedWorkspaceId" disabled="@(_busy || _workspaces.Count == 0)">
+            <select value="@_selectedWorkspaceId" @onchange="WorkspaceChangedAsync" disabled="@(_busy || _workspaces.Count == 0)">
                 <option value="">Select an open workspace</option>
                 @foreach (var workspace in _workspaces)
                 {
@@ -88,7 +90,12 @@
 
         <label class="field">
             <span>OSC passcode (optional)</span>
-            <input type="password" @bind="_passcode" disabled="@_busy" autocomplete="off"/>
+            <input type="password"
+                   value="@_passcode"
+                   @onchange="PasscodeChangedAsync"
+                   disabled="@(_busy || string.IsNullOrWhiteSpace(_selectedWorkspaceId))"
+                   autocomplete="off" />
+            <small>The passcode is kept only in memory for this app session and expires after 24 hours. It is not written to disk.</small>
         </label>
     </section>
 </div>
@@ -98,20 +105,32 @@
         <span class="step-number">3</span>
         <div>
             <h2>Import options</h2>
-            <p>A temporary cue list is populated first. Existing lists remain untouched unless replacement is explicitly
-                confirmed.</p>
+            <p>A temporary cue list is populated first. Existing lists remain untouched unless replacement is explicitly confirmed.</p>
         </div>
     </div>
 
     <div class="form-grid">
         <label class="field">
             <span>New cue list name</span>
-            <input @bind="CueListName" disabled="@_busy"/>
+            <input @bind="CueListName" disabled="@_busy" />
         </label>
-        <label class="field">
-            <span>QLab network patch name</span>
-            <input @bind="_networkPatchName" disabled="@_busy"/>
-        </label>
+        <div class="field">
+            <span>QLab network patch</span>
+            <select @bind="_selectedNetworkPatchId"
+                    disabled="@(_busy || string.IsNullOrWhiteSpace(_selectedWorkspaceId) || _networkPatches.Count == 0)">
+                <option value="">Select a network patch</option>
+                @foreach (var patch in _networkPatches)
+                {
+                    <option value="@patch.Id">@PatchDisplayName(patch)</option>
+                }
+            </select>
+            <button type="button"
+                    class="text-button"
+                    @onclick="RefreshNetworkPatchesAsync"
+                    disabled="@(_busy || string.IsNullOrWhiteSpace(_selectedWorkspaceId))">
+                Refresh patch list
+            </button>
+        </div>
         <label class="field">
             <span>Scene text</span>
             <select @bind="_sceneMode" disabled="@_busy">
@@ -138,18 +157,16 @@
     {
         <div class="conflict-box">
             <strong>A cue list named “@_cueListName” already exists.</strong>
-            <p>Replacement deletes only that matching list after the new temporary list has been built successfully.
-                Network cue numbers are assigned afterwards, so they can reuse the EOS numbers released by the replaced
-                list; numbers still used elsewhere remain blank.</p>
+            <p>Replacement deletes only that matching list after the new temporary list has been built successfully. Network cue numbers are assigned afterwards, so they can reuse the EOS numbers released by the replaced list; numbers still used elsewhere remain blank.</p>
             <label>
-                <input type="checkbox" @bind="_replacementConsent" disabled="@_busy"/>
+                <input type="checkbox" @bind="_replacementConsent" disabled="@_busy" />
                 I explicitly approve replacing the existing cue list.
             </label>
         </div>
     }
 
     <button class="primary" @onclick="ImportToQLabAsync" disabled="@(!CanImport)">
-        Import into QLab
+        Import @SelectedCueCount selected cue@(SelectedCueCount == 1 ? string.Empty : "s") into QLab
     </button>
 </section>
 
@@ -159,9 +176,21 @@
         <div class="preview-header">
             <div>
                 <h2>Cue preview</h2>
-                <p>The preview shows the normalized domain model used by both import strategies.</p>
+                <p>Edit label, notes, and scene text before importing. Deselected rows remain part of Follow/Hang analysis but are not created in QLab.</p>
             </div>
-            <span>@_source.Cues.Count total</span>
+            <div class="selection-toolbar">
+                <label class="selection-master">
+                    <input @ref="_selectAllCheckbox"
+                           type="checkbox"
+                           checked="@AllCuesSelected"
+                           @onchange="ToggleAllCues"
+                           disabled="@(_busy || _previewRows.Count == 0)"
+                           aria-checked="@SelectionAriaState" />
+                    <span>@SelectedCueCount / @_previewRows.Count selected</span>
+                </label>
+                <button type="button" class="text-button" @onclick="@(() => SetAllCues(true))" disabled="@(_busy || AllCuesSelected)">Select all</button>
+                <button type="button" class="text-button" @onclick="@(() => SetAllCues(false))" disabled="@(_busy || SelectedCueCount == 0)">Deselect all</button>
+            </div>
         </div>
 
         @if (_source.Diagnostics.Count > 0)
@@ -177,48 +206,51 @@
             </div>
         }
 
-        <div class="table-wrap">
-            <table>
+        <div class="table-wrap preview-table-wrap">
+            <table class="preview-table">
                 <thead>
                 <tr>
+                    <th class="selection-column">Import</th>
                     <th>#</th>
                     <th>EOS cue</th>
-                    <th>Label</th>
-                    <th>Notes</th>
-                    <th>Scene</th>
+                    <th>Label / QLab network name</th>
+                    <th>Notes / QLab network notes</th>
+                    <th>Scene / QLab memo name</th>
                     <th>Follow/Hang</th>
                 </tr>
                 </thead>
                 <tbody>
-                @foreach (var cue in _source.Cues.Take(500))
+                @foreach (var row in _previewRows)
                 {
-                    <tr>
-                        <td>@(cue.SourceOrder + 1)</td>
-                        <td><strong>@cue.DisplayCueNumber</strong></td>
-                        <td>@(cue.Label ?? "—")</td>
-                        <td>@(cue.CueNotes ?? "—")</td>
-                        <td>@(cue.SceneText ?? "—")</td>
-                        <td>@(cue.Follow ?? "—")</td>
+                    <tr class="@(row.IsSelected ? string.Empty : "preview-row-excluded")">
+                        <td class="selection-column">
+                            <input type="checkbox" @bind="row.IsSelected" disabled="@_busy" aria-label="Import cue @row.DisplayCueNumber" />
+                        </td>
+                        <td>@(row.SourceOrder + 1)</td>
+                        <td><strong>@row.DisplayCueNumber</strong></td>
+                        <td><input class="preview-input" @bind="row.Label" disabled="@_busy" aria-label="Label for cue @row.DisplayCueNumber" /></td>
+                        <td><input class="preview-input" @bind="row.Notes" disabled="@_busy" aria-label="Notes for cue @row.DisplayCueNumber" /></td>
+                        <td><input class="preview-input" @bind="row.Scene" disabled="@_busy" aria-label="Scene for cue @row.DisplayCueNumber" /></td>
+                        <td>@(row.Follow ?? "—")</td>
                     </tr>
                 }
                 </tbody>
             </table>
         </div>
-        @if (_source.Cues.Count > 500)
-        {
-            <p class="table-note">Only the first 500 cues are shown. All cues will be imported.</p>
-        }
     </section>
 }
 
 @code {
     private const long MaximumSourceSize = 1024L * 1024L * 1024L;
     private EosImportResult? _source;
+    private List<CuePreviewRow> _previewRows = [];
     private IReadOnlyList<QLabWorkspace> _workspaces = [];
+    private IReadOnlyList<QLabNetworkPatch> _networkPatches = [];
+    private ElementReference _selectAllCheckbox;
     private string _selectedWorkspaceId = string.Empty;
+    private string _selectedNetworkPatchId = string.Empty;
     private string _passcode = string.Empty;
     private string _cueListName = $"EOS Import {DateTime.Now:yyyy-MM-dd HHmm}";
-    private string _networkPatchName = "Patch 1";
     private SceneTextImportMode _sceneMode = SceneTextImportMode.MemoCue;
     private FollowedCueImportMode _followedCueMode = FollowedCueImportMode.Exclude;
     private bool _saveWorkspace = true;
@@ -228,21 +260,6 @@
     private string? _errorCode;
     private string? _errorMessage;
     private string? _successMessage;
-
-    private string SelectedWorkspaceId
-    {
-        get => _selectedWorkspaceId;
-        set
-        {
-            if (string.Equals(_selectedWorkspaceId, value, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            _selectedWorkspaceId = value;
-            ResetConflictState();
-        }
-    }
 
     private string CueListName
     {
@@ -259,16 +276,39 @@
         }
     }
 
+    private int SelectedCueCount => _previewRows.Count(row => row.IsSelected);
+    private bool AllCuesSelected => _previewRows.Count > 0 && SelectedCueCount == _previewRows.Count;
+    private bool SelectionIsIndeterminate => SelectedCueCount > 0 && !AllCuesSelected;
+    private string SelectionAriaState => SelectionIsIndeterminate ? "mixed" : AllCuesSelected ? "true" : "false";
+
     private bool CanImport => !_busy
-                              && _source is { Cues.Count: > 0 }
+                              && _source is not null
+                              && SelectedCueCount > 0
                               && !string.IsNullOrWhiteSpace(_selectedWorkspaceId)
                               && !string.IsNullOrWhiteSpace(_cueListName)
-                              && !string.IsNullOrWhiteSpace(_networkPatchName)
+                              && !string.IsNullOrWhiteSpace(_selectedNetworkPatchId)
                               && (!_conflictDetected || _replacementConsent);
 
     protected override async Task OnInitializedAsync()
     {
         await RefreshWorkspacesAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_source is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("eosToQLab.setIndeterminate", _selectAllCheckbox, SelectionIsIndeterminate);
+        }
+        catch (JSException)
+        {
+            // The next render will retry if the WebView is still initializing.
+        }
     }
 
     private async Task LoadSourceAsync(InputFileChangeEventArgs eventArgs)
@@ -284,6 +324,7 @@
     private async Task LoadSourceContentAsync(string fileName, Stream source, long? sourceSize)
     {
         _source = null;
+        _previewRows = [];
         _successMessage = null;
         _conflictDetected = false;
         _replacementConsent = false;
@@ -308,6 +349,7 @@
         content.Position = 0;
         var importer = ImporterFactory.CreateFor(fileName);
         _source = await importer.ImportAsync(new EosImportRequest(fileName, content));
+        _previewRows = _source.Cues.Select(CuePreviewRow.FromCue).ToList();
     }
 
     private async Task RefreshWorkspacesAsync()
@@ -315,15 +357,88 @@
         await RunGuardedAsync(async () =>
         {
             _workspaces = await QLabService.GetOpenWorkspacesAsync();
-            if (_workspaces.Count == 1)
+            var nextWorkspaceId = _workspaces.Count == 1
+                ? _workspaces[0].Id
+                : _workspaces.Any(workspace => workspace.Id == _selectedWorkspaceId)
+                    ? _selectedWorkspaceId
+                    : string.Empty;
+
+            if (!string.Equals(nextWorkspaceId, _selectedWorkspaceId, StringComparison.Ordinal))
             {
-                SelectedWorkspaceId = _workspaces[0].Id;
+                await SelectWorkspaceCoreAsync(nextWorkspaceId);
             }
-            else if (_workspaces.All(workspace => workspace.Id != _selectedWorkspaceId))
+            else if (!string.IsNullOrWhiteSpace(nextWorkspaceId))
             {
-                SelectedWorkspaceId = string.Empty;
+                await LoadNetworkPatchesCoreAsync();
             }
         });
+    }
+
+    private async Task WorkspaceChangedAsync(ChangeEventArgs eventArgs)
+    {
+        var workspaceId = eventArgs.Value?.ToString() ?? string.Empty;
+        await RunGuardedAsync(() => SelectWorkspaceCoreAsync(workspaceId));
+    }
+
+    private async Task SelectWorkspaceCoreAsync(string workspaceId)
+    {
+        _selectedWorkspaceId = workspaceId;
+        _networkPatches = [];
+        _selectedNetworkPatchId = string.Empty;
+        _passcode = string.Empty;
+        ResetConflictState();
+
+        if (string.IsNullOrWhiteSpace(workspaceId))
+        {
+            return;
+        }
+
+        _passcode = await PasscodeStore.GetAsync(workspaceId) ?? string.Empty;
+        await LoadNetworkPatchesCoreAsync();
+    }
+
+    private async Task PasscodeChangedAsync(ChangeEventArgs eventArgs)
+    {
+        _passcode = eventArgs.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(_selectedWorkspaceId))
+        {
+            return;
+        }
+
+        await RunGuardedAsync(async () =>
+        {
+            await LoadNetworkPatchesCoreAsync();
+            await PasscodeStore.SetAsync(_selectedWorkspaceId, NullIfWhiteSpace(_passcode));
+        });
+    }
+
+    private Task RefreshNetworkPatchesAsync()
+    {
+        return RunGuardedAsync(LoadNetworkPatchesCoreAsync);
+    }
+
+    private async Task LoadNetworkPatchesCoreAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedWorkspaceId))
+        {
+            _networkPatches = [];
+            _selectedNetworkPatchId = string.Empty;
+            return;
+        }
+
+        var previousSelection = _selectedNetworkPatchId;
+        _networkPatches = (await QLabService.GetNetworkPatchesAsync(
+                _selectedWorkspaceId,
+                NullIfWhiteSpace(_passcode)))
+            .OrderBy(patch => patch.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        _selectedNetworkPatchId = _networkPatches.Any(patch =>
+                string.Equals(patch.Id, previousSelection, StringComparison.OrdinalIgnoreCase))
+            ? previousSelection
+            : _networkPatches.Count == 1
+                ? _networkPatches[0].Id
+                : string.Empty;
     }
 
     private async Task ImportToQLabAsync()
@@ -335,6 +450,15 @@
 
         await RunGuardedAsync(async () =>
         {
+            var selectedPatch = _networkPatches.FirstOrDefault(patch =>
+                string.Equals(patch.Id, _selectedNetworkPatchId, StringComparison.OrdinalIgnoreCase));
+            if (selectedPatch is null)
+            {
+                throw new InvalidOperationException("Select a QLab network patch before importing.");
+            }
+
+            await PasscodeStore.SetAsync(_selectedWorkspaceId, NullIfWhiteSpace(_passcode));
+
             var cueLists = await QLabService.GetCueListsAsync(
                 _selectedWorkspaceId,
                 NullIfWhiteSpace(_passcode));
@@ -349,14 +473,16 @@
                 return;
             }
 
+            var editedCues = _previewRows.Select(row => row.ToCue()).ToArray();
             var result = await QLabService.ImportAsync(
-                _source.Cues,
+                editedCues,
                 new QLabImportOptions
                 {
                     WorkspaceId = _selectedWorkspaceId,
                     Passcode = NullIfWhiteSpace(_passcode),
                     CueListName = _cueListName.Trim(),
-                    NetworkPatchName = _networkPatchName.Trim(),
+                    NetworkPatchId = selectedPatch.Id,
+                    NetworkPatchName = selectedPatch.Name,
                     SceneTextMode = _sceneMode,
                     FollowedCueMode = _followedCueMode,
                     ConflictPolicy = hasConflict
@@ -370,6 +496,19 @@
             _replacementConsent = false;
             _successMessage = $"Imported {result.NetworkCueCount} network cues and {result.MemoCueCount} memo cues into '{_cueListName}'.";
         });
+    }
+
+    private void ToggleAllCues(ChangeEventArgs eventArgs)
+    {
+        SetAllCues(eventArgs.Value is true || string.Equals(eventArgs.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void SetAllCues(bool selected)
+    {
+        foreach (var row in _previewRows)
+        {
+            row.IsSelected = selected;
+        }
     }
 
     private async Task RunGuardedAsync(Func<Task> operation)
@@ -408,10 +547,15 @@
         _replacementConsent = false;
     }
 
+    private static string PatchDisplayName(QLabNetworkPatch patch)
+    {
+        return string.IsNullOrWhiteSpace(patch.Type)
+            ? patch.Name
+            : $"{patch.Name} ({patch.Type})";
+    }
+
     private static string? NullIfWhiteSpace(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
-
-
 }

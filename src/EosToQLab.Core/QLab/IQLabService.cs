@@ -11,6 +11,11 @@ public interface IQLabService
         string? passcode,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<QLabNetworkPatch>> GetNetworkPatchesAsync(
+        string workspaceId,
+        string? passcode,
+        CancellationToken cancellationToken = default);
+
     Task<QLabImportResult> ImportAsync(
         IReadOnlyList<EosCue> cues,
         QLabImportOptions options,

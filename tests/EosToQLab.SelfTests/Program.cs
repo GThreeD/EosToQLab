@@ -18,6 +18,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("Follow/hang chains can be excluded", TestFollowExcludeChainAsync),
     ("Follow/hang chains can be imported disarmed", TestFollowImportDisarmedAsync),
     ("Follow/hang state is isolated per EOS list", TestFollowStatePerListAsync),
+    ("Manual cue selection preserves follow/hang classification", TestManualSelectionPreservesFollowChainAsync),
     ("Scene text creates memo cues without duplication", TestSceneTextAsync),
     ("Plans always request the exact EOS cue number", TestDesiredNumberingAsync),
     ("Duplicate EOS cue numbers are attempted independently", TestDuplicateDesiredNumberingAsync),
@@ -178,6 +179,27 @@ static Task TestFollowStatePerListAsync()
         "The next cue in EOS list 1 should be excluded.");
     Assert(networkCues.Length == 2, "Follow/hang did not skip exactly one cue.");
     Assert(networkCues[0].CueNumber == "1" && networkCues[1].CueNumber == "3", "The wrong cue was skipped.");
+    return Task.CompletedTask;
+}
+
+static Task TestManualSelectionPreservesFollowChainAsync()
+{
+    var cues = new[]
+    {
+        Cue(0, "83.1", follow: "F1") with { ImportEnabled = false },
+        Cue(1, "83.2"),
+        Cue(2, "84")
+    };
+    var plan = new QLabImportPlanBuilder().Build(
+        cues,
+        Options() with { FollowedCueMode = FollowedCueImportMode.ImportDisarmed });
+    var networkCues = plan.Items.OfType<QLabNetworkCuePlan>().ToArray();
+
+    Assert(networkCues.Length == 2, "The manually deselected cue should not be imported.");
+    Assert(networkCues[0].CueNumber == "83.2" && !networkCues[0].Armed,
+        "A cue following a manually deselected Follow cue must remain classified as automatic.");
+    Assert(networkCues[1].CueNumber == "84" && networkCues[1].Armed,
+        "The follow chain should end after the first cue without Follow/Hang.");
     return Task.CompletedTask;
 }
 
@@ -491,6 +513,7 @@ static QLabImportOptions Options()
         WorkspaceId = "test",
         CueListName = "Test",
         SceneTextMode = SceneTextImportMode.MemoCue,
+        NetworkPatchId = "patch-id",
         NetworkPatchName = "Eos"
     };
 }
@@ -586,9 +609,10 @@ internal sealed class TrackingNumberSession : IQLabOscSession
         throw new NotSupportedException();
     }
 
-    public Task<QLabNetworkPatch> FindNetworkPatchAsync(string patchName, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<QLabNetworkPatch>> GetNetworkPatchesAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException();
+        return Task.FromResult<IReadOnlyList<QLabNetworkPatch>>(
+            [new QLabNetworkPatch(_patchId, "EOS", "eos")]);
     }
 
     public Task<string?> GetCurrentCueListIdAsync(CancellationToken cancellationToken = default)

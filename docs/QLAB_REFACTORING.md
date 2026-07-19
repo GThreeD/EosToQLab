@@ -19,3 +19,11 @@ A new plan type now needs:
 - The selected EOS network patch is verified on the first Network cue only; all cues in one import use the same patch ID.
 - QLab cue numbers are cleared only for Network cues that will later receive an EOS cue number. Memo cues no longer send redundant number writes.
 - The Blazor `InputFile` drop zone is used for both drag-and-drop and click selection. No browser `accept` filter is applied because macOS/WebKit can otherwise disable custom `.esf3d` files; the importer factory still validates the extension after selection.
+
+## v10: secure credentials, patch discovery, and editable preview
+
+- OSC passcodes are kept per QLab workspace in `SessionQLabPasscodeStore` for at most 24 hours and are never written to disk. `MauiSecurePasscodeStore` remains available but is not registered by default; it can be enabled for signed builds that may use the platform keychain.
+- The import options query the selected workspace's network patch list and keep the selected patch by its QLab unique ID.
+- Preview rows are editable for EOS label, cue notes, and scene text before planning.
+- Every preview row has an import checkbox. The master checkbox supports checked, unchecked, and indeterminate states, with explicit Select all and Deselect all actions.
+- Manual deselection does not remove a cue from Follow/Hang sequence analysis, so downstream automatic-cue classification remains correct.

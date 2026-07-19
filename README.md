@@ -191,3 +191,7 @@ Artifacts are copied to `dist/`. Local output is ad-hoc signed. Public distribut
 - [Architecture](docs/ARCHITECTURE.md)
 - [QLab safety and conflict handling](docs/QLAB_SAFETY.md)
 - [Build and validation](docs/BUILD_AND_TEST.md)
+
+## Import UI
+
+The Mac Catalyst UI keeps each workspace's OSC passcode only in a 24-hour in-process session cache by default, loads QLab network patches into a dropdown, and provides an editable cue preview. Passcodes are not written to disk and are lost when the app process exits. The optional `MauiSecurePasscodeStore` remains available for signed builds that can use the platform keychain. Label, notes, and scene text can be changed before import, and cues can be selected individually or through a tri-state Select all control.

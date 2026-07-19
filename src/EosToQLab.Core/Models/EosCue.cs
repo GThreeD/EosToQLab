@@ -11,6 +11,7 @@ public sealed record EosCue
     public string? CueNotes { get; init; }
     public string? SceneText { get; init; }
     public EosSourceKind SourceKind { get; init; }
+    public bool ImportEnabled { get; init; } = true;
 
     public IReadOnlyDictionary<string, string?> AdditionalValues { get; init; } =
         new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);

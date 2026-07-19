@@ -31,9 +31,10 @@ public sealed class QLabImportWorkflow(
                 || !options.ExplicitReplacementConsent))
             throw new QLabCueListConflictException(options.CueListName);
 
-        var networkPatch = await session.FindNetworkPatchAsync(
-            options.NetworkPatchName,
-            cancellationToken);
+        var networkPatches = await session.GetNetworkPatchesAsync(cancellationToken);
+        var networkPatch = networkPatches.FirstOrDefault(patch =>
+                string.Equals(patch.Id, options.NetworkPatchId, StringComparison.OrdinalIgnoreCase))
+            ?? throw new QLabNetworkPatchNotFoundException(options.NetworkPatchName);
         if (!QLabProtocol.IsEosNetworkPatchType(networkPatch.Type))
             throw new QLabNetworkPatchTypeMismatchException(networkPatch.Name, networkPatch.Type ?? string.Empty);
 

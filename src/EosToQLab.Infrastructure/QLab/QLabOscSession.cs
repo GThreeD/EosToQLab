@@ -35,16 +35,13 @@ public sealed class QLabOscSession : IQLabOscSession
         return QLabJsonParser.ParseCueLists(reply.Data);
     }
 
-    public async Task<QLabNetworkPatch> FindNetworkPatchAsync(
-        string patchName,
+    public async Task<IReadOnlyList<QLabNetworkPatch>> GetNetworkPatchesAsync(
         CancellationToken cancellationToken = default)
     {
         using var reply = await SendWorkspaceCommandAsync(
             QLabProtocol.WorkspaceCommands.NetworkPatchList,
             cancellationToken);
-        return QLabJsonParser.ParseNetworkPatches(reply.Data)
-                   .FirstOrDefault(patch => patch.Name.Contains(patchName, StringComparison.Ordinal))
-               ?? throw new QLabNetworkPatchNotFoundException(patchName);
+        return QLabJsonParser.ParseNetworkPatches(reply.Data);
     }
 
     public Task<string?> GetCurrentCueListIdAsync(CancellationToken cancellationToken = default)

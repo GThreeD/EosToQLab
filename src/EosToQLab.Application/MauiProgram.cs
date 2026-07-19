@@ -1,3 +1,4 @@
+using EosToQLab.Application.Services;
 using EosToQLab.Core.Import;
 using EosToQLab.Core.Planning;
 using EosToQLab.Core.QLab;
@@ -17,6 +18,12 @@ public static class MauiProgram
         builder.UseMauiApp<Application>();
 
         builder.Services.AddMauiBlazorWebView();
+        // Default: keep passcodes only in the current app process. Nothing is persisted.
+        builder.Services.AddSingleton<IQLabPasscodeStore, SessionQLabPasscodeStore>();
+
+        // Optional persistent implementation. Enable this registration only for a signed build
+        // that is allowed to use the platform keychain, and remove the session registration above.
+        // builder.Services.AddSingleton<IQLabPasscodeStore, MauiSecurePasscodeStore>();
         builder.Services.AddSingleton<IEosCueImporter, CsvEosCueImporter>();
         builder.Services.AddSingleton<IEosCueImporter, Esf3dEosCueImporter>();
         builder.Services.AddSingleton<IEosCueImporterFactory, EosCueImporterFactory>();
