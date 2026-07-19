@@ -30,10 +30,10 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
             {
                 AddSceneMemoIfNeeded(items, cue, options, ref previousScene);
                 items.Add(new QLabNetworkCuePlan(
-                    BuildCueName(cue, options.CueNamePrefix),
+                    NullToEmpty(cue.Label),
                     cue.ListNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     cue.CueNumber,
-                    BuildNotes(cue, options.SceneTextMode)));
+                    NullIfWhiteSpace(cue.CueNotes)));
             }
 
             skipNextByList[cue.ListNumber] = options.SkipCueAfterFollowOrHang && cue.HasFollowOrHang;
@@ -48,37 +48,20 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
         QLabImportOptions options,
         ref string? previousScene)
     {
-        if (string.IsNullOrWhiteSpace(cue.SceneText)
-            || options.SceneTextMode is SceneTextImportMode.Ignore or SceneTextImportMode.NotesOnly
+        if (options.SceneTextMode != SceneTextImportMode.MemoCue
+            || string.IsNullOrWhiteSpace(cue.SceneText)
             || string.Equals(previousScene, cue.SceneText, StringComparison.Ordinal))
         {
             return;
         }
 
         previousScene = cue.SceneText;
-        items.Add(new QLabMemoCuePlan(cue.SceneText.Trim(), $"Scene from EOS cue {cue.DisplayCueNumber}"));
+        items.Add(new QLabMemoCuePlan(cue.SceneText.Trim(), Notes: null));
     }
 
-    private static string BuildCueName(EosCue cue, string prefix)
-    {
-        var suffix = string.IsNullOrWhiteSpace(cue.Label) ? string.Empty : $" - {cue.Label.Trim()}";
-        return $"{prefix.Trim()} {cue.DisplayCueNumber}{suffix}";
-    }
+    private static string NullToEmpty(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
 
-    private static string? BuildNotes(EosCue cue, SceneTextImportMode mode)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(cue.CueNotes))
-        {
-            parts.Add(cue.CueNotes.Trim());
-        }
-
-        if (mode is SceneTextImportMode.NotesOnly or SceneTextImportMode.MemoCueAndNotes
-            && !string.IsNullOrWhiteSpace(cue.SceneText))
-        {
-            parts.Add($"Scene: {cue.SceneText.Trim()}");
-        }
-
-        return parts.Count == 0 ? null : string.Join(Environment.NewLine, parts);
-    }
+    private static string? NullIfWhiteSpace(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

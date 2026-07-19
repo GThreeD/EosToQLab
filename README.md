@@ -18,8 +18,9 @@ The application does not export an intermediate file and does not use AppleScrip
 - Creates a separate temporary cue list before touching an existing list.
 - Rejects a duplicate cue-list name by default.
 - Allows replacement only after explicit confirmation in the UI and a second enforcement check in the QLab service.
-- Supports `SCENE_TEXT` as Memo cues, cue notes, both, or neither.
-- Corrects the Follow/Hang handling and reads `FOLLOW` by column name rather than a fixed CSV index.
+- Maps EOS scene text to QLab Memo-cue names; generated Memo notes stay empty.
+- Maps EOS labels to Network-cue names and EOS cue notes to Network-cue notes without generated prefixes.
+- Corrects the Follow/Hang handling, reads `FOLLOW` by column name in CSV, and decodes known ESF3D follow/hang encodings.
 - Uses dedicated exception and warning types with English messages and stable diagnostic codes.
 
 ## Small project structure
@@ -81,10 +82,12 @@ The binder caches reflection metadata once per source type, reads values by head
 
 - cue numbers encoded as fixed-point values with scale 10,000;
 - cue labels directly following the encoded cue number;
+- cue notes from the dedicated cue-header field;
 - nested scene labels;
+- known scalar, textual, and compact-object Follow/Hang encodings;
 - other short text fields as additional diagnostic data.
 
-It does not guess unsupported binary fields. In particular, Follow/Hang information is not currently decoded from ESF3D, so the CSV import remains more complete for that data.
+Unknown Follow/Hang object variants are not guessed. They produce a cue-specific warning and remain empty instead of being interpreted as another field.
 
 ## QLab requirements
 

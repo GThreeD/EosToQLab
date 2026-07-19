@@ -77,7 +77,17 @@ static async Task TestEsf3dAsync()
         .ImportAsync(new EosImportRequest(Path.GetFileName(path), stream));
 
     Assert(result.SourceKind == EosSourceKind.Esf3d, "The source kind is incorrect.");
-    Assert(result.Cues.Count > 0, "The synthetic ESF3D fixture returned no cues.");
+    Assert(result.Cues.Count == 3, "The synthetic ESF3D fixture returned the wrong cue count.");
+
+    var first = result.Cues.Single(cue => cue.CueNumber == "1");
+    Assert(first.Label == "Blackout", "The ESF3D cue label was not mapped.");
+    Assert(first.CueNotes == "Network note", "The ESF3D cue notes were not mapped.");
+    Assert(first.SceneText == "Scene A", "The ESF3D scene text was not mapped.");
+    Assert(first.Follow == "F3", "The ESF3D follow value was not mapped.");
+
+    var second = result.Cues.Single(cue => cue.CueNumber == "2");
+    Assert(second.Follow == "H1.5", "The structured ESF3D hang value was not mapped.");
+    Assert(!result.Diagnostics.OfType<Esf3dFollowNotDecodedWarning>().Any(), "A decoded follow/hang value was reported as unsupported.");
     Assert(result.Diagnostics.OfType<Esf3dLossTolerantParsingWarning>().Any(), "The loss-tolerant parser warning is missing.");
 }
 
@@ -103,14 +113,21 @@ static Task TestSceneTextAsync()
 {
     var cues = new[]
     {
-        Cue(0, "1", scene: "Scene A"),
-        Cue(1, "2", scene: "Scene A"),
-        Cue(2, "3", scene: "Scene B")
+        Cue(0, "1", label: "Network A", notes: "Note A", scene: "Scene A"),
+        Cue(1, "2", label: "Network B", scene: "Scene A"),
+        Cue(2, "3", label: "Network C", notes: "Note C", scene: "Scene B")
     };
     var plan = new QLabImportPlanBuilder().Build(cues, Options());
     var memos = plan.Items.OfType<QLabMemoCuePlan>().ToArray();
+    var networkCues = plan.Items.OfType<QLabNetworkCuePlan>().ToArray();
+
     Assert(memos.Length == 2, "Repeated scene text created duplicate memo cues.");
     Assert(memos[0].Name == "Scene A" && memos[1].Name == "Scene B", "Scene memo order is incorrect.");
+    Assert(memos.All(memo => memo.Notes is null), "Scene memos must not receive generated notes.");
+    Assert(networkCues.Select(cue => cue.Name).SequenceEqual(["Network A", "Network B", "Network C"]),
+        "Network cue names must contain only the EOS label.");
+    Assert(networkCues[0].Notes == "Note A" && networkCues[1].Notes is null && networkCues[2].Notes == "Note C",
+        "Network cue notes must contain only EOS cue notes.");
     return Task.CompletedTask;
 }
 
@@ -158,11 +175,19 @@ static Task TestNetworkMapperAsync()
     return Task.CompletedTask;
 }
 
-static EosCue Cue(int order, string number, string? follow = null, string? scene = null) => new()
+static EosCue Cue(
+    int order,
+    string number,
+    string? label = null,
+    string? notes = null,
+    string? follow = null,
+    string? scene = null) => new()
 {
     SourceOrder = order,
     ListNumber = 1,
     CueNumber = number,
+    Label = label,
+    CueNotes = notes,
     Follow = follow,
     SceneText = scene,
     SourceKind = EosSourceKind.Csv
@@ -172,7 +197,7 @@ static QLabImportOptions Options() => new()
 {
     WorkspaceId = "test",
     CueListName = "Test",
-    SceneTextMode = SceneTextImportMode.MemoCueAndNotes,
+    SceneTextMode = SceneTextImportMode.MemoCue,
     NetworkPatchName = "Eos"
 };
 

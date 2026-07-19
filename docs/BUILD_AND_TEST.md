@@ -14,10 +14,10 @@ The self-test console project has no external test-framework dependency. It chec
 - factory selection for `.csv` and `.esf3d`;
 - mapping of the reference EOS CSV;
 - cue-part aggregation;
-- `SCENE_TEXT` mapping;
-- the synthetic ESF3D fixture;
-- corrected Follow/Hang behavior;
-- scene Memo-cue de-duplication.
+- fixed scene-text, label, and cue-notes mapping;
+- the synthetic ESF3D fixture, including cue notes and Follow/Hang;
+- corrected Follow/Hang planning behavior;
+- scene Memo-cue de-duplication and empty Memo notes.
 
 ```bash
 dotnet run --project tests/EosToQLab.SelfTests/EosToQLab.SelfTests.csproj -c Release

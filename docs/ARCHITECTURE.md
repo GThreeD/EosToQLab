@@ -28,7 +28,7 @@ It has no MAUI, archive, reflection-mapping, TCP, or JSON dependencies beyond th
 Contains implementation details:
 
 - `CsvEosCueImporter`;
-- `Esf3dEosCueImporter`;
+- `Esf3dEosCueImporter` plus `Esf3dCueHeaderDecoder` for cue notes and Follow/Hang metadata;
 - `EosCueImporterFactory`;
 - OSC encoding/decoding;
 - double-END SLIP framing for QLab TCP;
@@ -76,8 +76,8 @@ After parsing and cue-part aggregation, source rows are mapped into `EosCue`. ES
 
 `QLabImportPlanBuilder` converts normalized cues into an ordered list of:
 
-- `QLabMemoCuePlan`;
-- `QLabNetworkCuePlan`.
+- `QLabMemoCuePlan`, using only EOS scene text as the Memo name and no generated notes;
+- `QLabNetworkCuePlan`, using only the EOS label as its name and EOS cue notes as its notes.
 
 Follow/Hang state is tracked per EOS cue-list number. The state is updated for every EOS cue, including a cue that is skipped because the previous cue had Follow/Hang. This prevents the permanent-block bug from the original AppleScript.
 

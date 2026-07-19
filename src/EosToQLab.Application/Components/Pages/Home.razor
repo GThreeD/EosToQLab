@@ -108,10 +108,6 @@
             <input @bind="CueListName" disabled="@_busy" />
         </label>
         <label class="field">
-            <span>Cue name prefix</span>
-            <input @bind="_cueNamePrefix" disabled="@_busy" />
-        </label>
-        <label class="field">
             <span>QLab network patch name</span>
             <input @bind="_networkPatchName" disabled="@_busy" />
         </label>
@@ -119,9 +115,7 @@
             <span>Scene text</span>
             <select @bind="_sceneMode" disabled="@_busy">
                 <option value="@SceneTextImportMode.Ignore">Ignore</option>
-                <option value="@SceneTextImportMode.NotesOnly">Cue notes only</option>
-                <option value="@SceneTextImportMode.MemoCueOnly">Memo cues only</option>
-                <option value="@SceneTextImportMode.MemoCueAndNotes">Memo cues and notes</option>
+                <option value="@SceneTextImportMode.MemoCue">Create memo cues</option>
             </select>
         </label>
     </div>
@@ -179,6 +173,7 @@
                         <th>#</th>
                         <th>EOS cue</th>
                         <th>Label</th>
+                        <th>Notes</th>
                         <th>Scene</th>
                         <th>Follow/Hang</th>
                     </tr>
@@ -190,6 +185,7 @@
                             <td>@(cue.SourceOrder + 1)</td>
                             <td><strong>@cue.DisplayCueNumber</strong></td>
                             <td>@(cue.Label ?? "—")</td>
+                            <td>@(cue.CueNotes ?? "—")</td>
                             <td>@(cue.SceneText ?? "—")</td>
                             <td>@(cue.Follow ?? "—")</td>
                         </tr>
@@ -211,9 +207,8 @@
     private string _selectedWorkspaceId = string.Empty;
     private string _passcode = string.Empty;
     private string _cueListName = $"EOS Import {DateTime.Now:yyyy-MM-dd HHmm}";
-    private string _cueNamePrefix = "EOS";
     private string _networkPatchName = "Patch 1";
-    private SceneTextImportMode _sceneMode = SceneTextImportMode.MemoCueAndNotes;
+    private SceneTextImportMode _sceneMode = SceneTextImportMode.MemoCue;
     private bool _skipCueAfterFollowOrHang = true;
     private bool _saveWorkspace = true;
     private bool _conflictDetected;
@@ -331,7 +326,6 @@
                     WorkspaceId = _selectedWorkspaceId,
                     Passcode = NullIfWhiteSpace(_passcode),
                     CueListName = _cueListName.Trim(),
-                    CueNamePrefix = _cueNamePrefix.Trim(),
                     NetworkPatchName = _networkPatchName.Trim(),
                     SceneTextMode = _sceneMode,
                     SkipCueAfterFollowOrHang = _skipCueAfterFollowOrHang,

@@ -28,9 +28,13 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         var recovered = ExtractCues(data, ExtractTextFields(data));
         var diagnostics = new List<EosDiagnostic>
         {
-            new Esf3dLossTolerantParsingWarning(),
-            new Esf3dFollowNotDecodedWarning()
+            new Esf3dLossTolerantParsingWarning()
         };
+
+        foreach (var cue in recovered.Where(cue => cue.FollowDecodeFailed))
+        {
+            diagnostics.Add(new Esf3dFollowNotDecodedWarning(FormatCueNumber(cue.RawCueNumber)));
+        }
 
         if (recovered.Count == 0)
         {
@@ -44,6 +48,8 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
             ListNumber = 1,
             CueNumber = FormatCueNumber(cue.RawCueNumber),
             Label = NullIfWhiteSpace(cue.CueLabel),
+            Follow = NullIfWhiteSpace(cue.Follow),
+            CueNotes = NullIfWhiteSpace(cue.CueNotes),
             SceneText = NullIfWhiteSpace(cue.SceneLabel),
             SourceKind = EosSourceKind.Esf3d,
             AdditionalValues = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
@@ -190,11 +196,24 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
                     && IsUsefulRecordText(field.Text))
                 .ToArray();
             var cueLabel = recordFields.FirstOrDefault(field => field.Offset == number.End);
+            var header = Esf3dCueHeaderDecoder.Decode(data, number.End, recordEnd);
             var sceneLabel = recordFields.FirstOrDefault(field =>
                 field.Offset > number.End
                 && field.Offset > 0
                 && data[field.Offset - 1] == 0x02
-                && field.Offset != cueLabel?.Offset);
+                && field.Offset != cueLabel?.Offset
+                && field.Offset != header.FollowTextOffset);
+            var cueNotes = header.CueNotesOffset is int cueNotesOffset
+                ? recordFields.FirstOrDefault(field => field.Offset == cueNotesOffset)
+                : !header.Parsed
+                    ? recordFields.FirstOrDefault(field =>
+                        field.Offset > number.End
+                        && field.Offset > 0
+                        && data[field.Offset - 1] == 0x04
+                        && field.Offset != cueLabel?.Offset
+                        && field.Offset != sceneLabel?.Offset
+                        && field.Offset != header.FollowTextOffset)
+                    : null;
 
             var excludedOffsets = new HashSet<int>();
             if (cueLabel is not null)
@@ -205,11 +224,22 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
             {
                 excludedOffsets.Add(sceneLabel.Offset);
             }
+            if (cueNotes is not null)
+            {
+                excludedOffsets.Add(cueNotes.Offset);
+            }
+            if (header.FollowTextOffset is int followTextOffset)
+            {
+                excludedOffsets.Add(followTextOffset);
+            }
 
             recovered.Add(new RecoveredCue(
                 number.RawValue,
                 cueLabel?.Text.Trim(),
+                cueNotes?.Text.Trim(),
                 sceneLabel?.Text.Trim(),
+                header.Follow,
+                header.FollowDecodeFailed,
                 recordFields
                     .Where(field => !excludedOffsets.Contains(field.Offset))
                     .Select(field => field.Text.Trim())
@@ -415,6 +445,9 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
     private sealed record RecoveredCue(
         int RawCueNumber,
         string? CueLabel,
+        string? CueNotes,
         string? SceneLabel,
+        string? Follow,
+        bool FollowDecodeFailed,
         IReadOnlyList<string> OtherTexts);
 }
