@@ -48,12 +48,22 @@ internal static class Esf3dHeaderFixtureBuilder
         return [0x01, value ? (byte)1 : (byte)0];
     }
 
-    public static byte[] Continuation(bool firstMode, bool secondMode, int milliseconds)
+    public static byte[] Continuation(
+        bool isHang,
+        int milliseconds,
+        bool firstLegacyMode = false,
+        bool secondLegacyMode = false)
     {
         return
         [
-            0x02, .. Boolean(firstMode), .. Unsigned(1), .. Boolean(secondMode), .. Unsigned(1),
-            .. Unsigned(milliseconds), 0x04, .. Unsigned(1)
+            0x02,
+            .. Boolean(firstLegacyMode),
+            .. Unsigned(1),
+            .. Boolean(secondLegacyMode),
+            .. Unsigned(1),
+            .. Unsigned(milliseconds),
+            isHang ? (byte)0x00 : (byte)0x04,
+            .. Unsigned(1)
         ];
     }
 }

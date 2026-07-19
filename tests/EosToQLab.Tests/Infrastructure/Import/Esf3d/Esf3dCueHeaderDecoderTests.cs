@@ -35,11 +35,58 @@ public sealed class Esf3dCueHeaderDecoderTests
     }
 
     [Fact]
-    public void Decodes_current_continuation_object_when_legacy_field_is_null()
+    public void Decodes_current_continuation_follow_and_hang_when_legacy_field_is_null()
     {
-        var fixture = Esf3dHeaderFixtureBuilder.Build([0x00],
-            continuation: Esf3dHeaderFixtureBuilder.Continuation(false, true, 1250));
+        var followFixture = Esf3dHeaderFixtureBuilder.Build(
+            [0x00],
+            continuation: Esf3dHeaderFixtureBuilder.Continuation(false, 1250));
+        var hangFixture = Esf3dHeaderFixtureBuilder.Build(
+            [0x00],
+            continuation: Esf3dHeaderFixtureBuilder.Continuation(true, 1500));
+
+        Assert.Equal(
+            "F1.25",
+            Esf3dCueHeaderDecoder.Decode(followFixture.Data, 0, followFixture.RecordEnd).Follow);
+        Assert.Equal(
+            "H1.5",
+            Esf3dCueHeaderDecoder.Decode(hangFixture.Data, 0, hangFixture.RecordEnd).Follow);
+    }
+
+    [Fact]
+    public void Decodes_real_eos_3_3_5_hang_continuation_bytes()
+    {
+        byte[] continuation =
+        [
+            0x02,
+            0x01, 0x00,
+            0x08, 0x01,
+            0x01, 0x00,
+            0x08, 0x01,
+            0x09, 0xDC, 0x05,
+            0x00,
+            0x08, 0x01
+        ];
+        var fixture = Esf3dHeaderFixtureBuilder.Build([0x00], continuation: continuation);
+
         var result = Esf3dCueHeaderDecoder.Decode(fixture.Data, 0, fixture.RecordEnd);
+
+        Assert.True(result.Parsed);
+        Assert.Equal("H1.5", result.Follow);
+        Assert.False(result.FollowDecodeFailed);
+    }
+
+    [Fact]
+    public void Keeps_support_for_legacy_boolean_hang_mode()
+    {
+        var fixture = Esf3dHeaderFixtureBuilder.Build(
+            [0x00],
+            continuation: Esf3dHeaderFixtureBuilder.Continuation(
+                false,
+                1250,
+                secondLegacyMode: true));
+
+        var result = Esf3dCueHeaderDecoder.Decode(fixture.Data, 0, fixture.RecordEnd);
+
         Assert.Equal("H1.25", result.Follow);
     }
 

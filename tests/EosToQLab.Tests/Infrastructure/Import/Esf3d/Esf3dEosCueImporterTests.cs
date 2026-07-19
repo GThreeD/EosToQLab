@@ -85,6 +85,65 @@ public sealed class Esf3dEosCueImporterTests
     }
 
     [Fact]
+    public async Task Ignores_effect_reference_records_that_reuse_cue_numbers_901_to_903()
+    {
+        var fixture = TestData.FixturePath(
+            "Esf3d",
+            "known-3.3.5_Build_69",
+            "synthetic-known-3.3.5_Build_69.esf3d");
+        await using var stream = File.OpenRead(fixture);
+
+        var result = await _sut.ImportAsync(new EosImportRequest(Path.GetFileName(fixture), stream),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(new[] { "1", "2", "3", "4", "5", "6", "7" },
+            result.Cues.Select(cue => cue.CueNumber));
+        Assert.DoesNotContain(result.Cues, cue => cue.CueNumber is "901" or "902" or "903");
+    }
+
+    [Theory]
+    [InlineData("known-3.3.5_Build_69-with-901", null)]
+    [InlineData("known-3.3.5_Build_69-with-901-label", "With Label")]
+    public async Task Keeps_a_real_cue_901_and_does_not_attach_global_effect_text(
+        string fixtureDirectory,
+        string? expectedLabel)
+    {
+        var fixture = Directory.EnumerateFiles(TestData.FixturePath("Esf3d", fixtureDirectory), "*.esf3d").Single();
+        await using var stream = File.OpenRead(fixture);
+
+        var result = await _sut.ImportAsync(new EosImportRequest(Path.GetFileName(fixture), stream),
+            TestContext.Current.CancellationToken);
+        var cue901 = Assert.Single(result.Cues, cue => cue.CueNumber == "901");
+
+        Assert.Equal(expectedLabel, cue901.Label);
+        Assert.Null(cue901.CueNotes);
+        Assert.Null(cue901.SceneText);
+        Assert.DoesNotContain(result.Cues, cue => cue.CueNumber is "902" or "903");
+    }
+
+    [Fact]
+    public async Task Ignores_a_number_marker_with_an_invalid_cue_record_trailer()
+    {
+        byte[] showData =
+        [
+            0x02, 0x01, 0x00, 0x01, 0x01,
+            0x09, 0x10, 0x27,
+            0x00, 0x02, 0x02, 0x02, 0x01, 0x00, 0x00, 0x02,
+            0x08,
+            0x04, 0x04, 0x04,
+            0x02, 0x01, 0x00, 0x01, 0x01,
+            0x08, 0x01
+        ];
+        await using var archive = CreateArchive(showData);
+
+        var result = await _sut.ImportAsync(new EosImportRequest("invalid-trailer.esf3d", archive),
+            TestContext.Current.CancellationToken);
+
+        Assert.Empty(result.Cues);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic is Esf3dNoCueSequenceWarning);
+    }
+
+    [Fact]
     public async Task Empty_show_data_returns_diagnostics_instead_of_guessing()
     {
         await using var archive = CreateArchive([]);

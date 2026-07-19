@@ -13,6 +13,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
     private const byte TextTag = 0x03;
     private const int CueScale = 10_000;
     private static readonly byte[] CueMarker = [0x02, 0x01, 0x00, 0x01, 0x01];
+    private static readonly byte[] CueRecordTrailer = [0x00, 0x02, 0x02, 0x02, 0x01, 0x00, 0x00, 0x02];
 
     public EosSourceKind SourceKind => EosSourceKind.Esf3d;
 
@@ -156,18 +157,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         {
             var number = run[index];
             var recordStart = number.Offset - CueMarker.Length;
-            int recordEnd;
-            if (index + 1 < run.Count)
-            {
-                recordEnd = run[index + 1].Offset - CueMarker.Length;
-            }
-            else
-            {
-                var globalIndex = allCandidates.FindIndex(candidate => candidate.Offset == number.Offset);
-                recordEnd = globalIndex >= 0 && globalIndex + 1 < allCandidates.Count
-                    ? allCandidates[globalIndex + 1].Offset - CueMarker.Length
-                    : data.Length;
-            }
+            var recordEnd = number.RecordEnd;
 
             var recordFields = fields
                 .Where(field => field.Offset >= recordStart
@@ -228,7 +218,12 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
             var numberOffset = markerOffset + CueMarker.Length;
             if (TryDecodeTaggedUnsigned(data, numberOffset, out var rawValue, out var end)
                 && rawValue is >= CueScale and <= 99_999_999)
-                result.Add(new NumberCandidate(numberOffset, rawValue, end));
+            {
+                var nextMarkerOffset = FindPattern(data, CueMarker, markerOffset + 1);
+                var recordBoundary = nextMarkerOffset >= 0 ? nextMarkerOffset : data.Length;
+                if (TryFindCueRecordEnd(data, end, recordBoundary, out var recordEnd))
+                    result.Add(new NumberCandidate(numberOffset, rawValue, end, recordEnd));
+            }
 
             position = markerOffset + 1;
         }
@@ -239,11 +234,52 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
     private static List<NumberCandidate> SelectMainCueRun(List<NumberCandidate> candidates)
     {
         return SplitMonotonicRuns(candidates)
-            .Where(run => run is [{ RawValue: <= 100 * CueScale }, _, ..]
-                          && run.All(item => item.RawValue % 10 == 0))
+            .Where(run => run.All(item => item.RawValue % 10 == 0))
             .OrderByDescending(run => run.Count)
             .ThenByDescending(run => run[^1].Offset - run[0].Offset)
             .FirstOrDefault() ?? [];
+    }
+
+    private static bool TryFindCueRecordEnd(
+        byte[] data,
+        int start,
+        int boundary,
+        out int recordEnd)
+    {
+        recordEnd = 0;
+        var position = start;
+        while (position < boundary)
+        {
+            var trailerOffset = FindPattern(data, CueRecordTrailer, position);
+            if (trailerOffset < 0 || trailerOffset + CueRecordTrailer.Length >= boundary) return false;
+
+            var sceneOffset = trailerOffset + CueRecordTrailer.Length;
+            var sceneEnd = SceneValueEnd(data, sceneOffset, boundary);
+            if (sceneEnd >= 0
+                && sceneEnd + 3 == boundary
+                && data[sceneEnd] == 0x04
+                && data[sceneEnd + 1] == 0x04
+                && data[sceneEnd + 2] == 0x04)
+            {
+                recordEnd = boundary;
+                return true;
+            }
+
+            position = trailerOffset + 1;
+        }
+
+        return false;
+    }
+
+    private static int SceneValueEnd(byte[] data, int offset, int boundary)
+    {
+        if (offset >= boundary) return -1;
+        if (data[offset] == 0x00) return offset + 1;
+        if (data[offset] != TextTag || offset + 3 > boundary) return -1;
+
+        var characterCount = data[offset + 1] | (data[offset + 2] << 8);
+        var end = offset + 3 + characterCount * 2;
+        return end <= boundary ? end : -1;
     }
 
     private static IEnumerable<List<NumberCandidate>> SplitMonotonicRuns(
@@ -388,7 +424,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         public int End => Offset + ByteLength;
     }
 
-    private sealed record NumberCandidate(int Offset, int RawValue, int End);
+    private sealed record NumberCandidate(int Offset, int RawValue, int End, int RecordEnd);
 
     private sealed record RecoveredCue(
         int RawCueNumber,

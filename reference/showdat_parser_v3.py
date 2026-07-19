@@ -35,6 +35,7 @@ from pathlib import Path
 TEXT_TAG = 0x03
 UINT_WIDTHS = {0x08: 1, 0x09: 2, 0x0A: 3}
 CUE_MARKER = b"\x02\x01\x00\x01\x01"
+CUE_RECORD_TRAILER = b"\x00\x02\x02\x02\x01\x00\x00\x02"
 CUE_SCALE = 10_000
 
 GUID_RE = re.compile(r"^\$?[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$")
@@ -59,6 +60,7 @@ class NumberCandidate:
     offset: int
     raw_value: int
     end: int
+    record_end: int
 
 
 @dataclass(frozen=True)
@@ -157,6 +159,31 @@ def decode_tagged_unsigned(data: bytes, offset: int) -> tuple[int, int] | None:
     return int.from_bytes(data[start:end], "little"), end
 
 
+def scene_value_end(data: bytes, offset: int, boundary: int) -> int | None:
+    if offset >= boundary:
+        return None
+    if data[offset] == 0x00:
+        return offset + 1
+    if data[offset] != TEXT_TAG or offset + 3 > boundary:
+        return None
+    char_count = int.from_bytes(data[offset + 1 : offset + 3], "little")
+    end = offset + 3 + char_count * 2
+    return end if end <= boundary else None
+
+
+def find_cue_record_end(data: bytes, start: int, boundary: int) -> int | None:
+    position = start
+    while position < boundary:
+        trailer_offset = data.find(CUE_RECORD_TRAILER, position, boundary)
+        if trailer_offset < 0:
+            return None
+        scene_end = scene_value_end(data, trailer_offset + len(CUE_RECORD_TRAILER), boundary)
+        if scene_end is not None and scene_end + 3 == boundary and data[scene_end:boundary] == b"\x04\x04\x04":
+            return boundary
+        position = trailer_offset + 1
+    return None
+
+
 def cue_number_candidates(data: bytes) -> list[NumberCandidate]:
     result: list[NumberCandidate] = []
     position = 0
@@ -169,7 +196,11 @@ def cue_number_candidates(data: bytes) -> list[NumberCandidate]:
         if decoded is not None:
             value, end = decoded
             if CUE_SCALE <= value <= 99_999_999:
-                result.append(NumberCandidate(number_offset, value, end))
+                next_marker = data.find(CUE_MARKER, marker_offset + 1)
+                boundary = next_marker if next_marker >= 0 else len(data)
+                record_end = find_cue_record_end(data, end, boundary)
+                if record_end is not None:
+                    result.append(NumberCandidate(number_offset, value, end, record_end))
         position = marker_offset + 1
     return result
 
@@ -195,9 +226,7 @@ def select_main_cue_run(candidates: list[NumberCandidate]) -> list[NumberCandida
     plausible = [
         run
         for run in split_monotonic_runs(candidates)
-        if len(run) >= 2
-        and run[0].raw_value <= 100 * CUE_SCALE
-        and all(item.raw_value % 10 == 0 for item in run)
+        if all(item.raw_value % 10 == 0 for item in run)
     ]
     if not plausible:
         return []
@@ -226,19 +255,11 @@ def extract_cues(data: bytes, fields: list[TextField]) -> list[Cue]:
     if not run:
         return []
 
-    candidate_index = {candidate.offset: index for index, candidate in enumerate(all_candidates)}
     result: list[Cue] = []
 
     for index, number in enumerate(run):
         record_start = number.offset - len(CUE_MARKER)
-        if index + 1 < len(run):
-            record_end = run[index + 1].offset - len(CUE_MARKER)
-        else:
-            global_index = candidate_index[number.offset]
-            if global_index + 1 < len(all_candidates):
-                record_end = all_candidates[global_index + 1].offset - len(CUE_MARKER)
-            else:
-                record_end = len(data)
+        record_end = number.record_end
 
         record_fields = [
             field

@@ -86,9 +86,13 @@ internal static class Esf3dCueHeaderDecoder
         value = null;
 
         // Observed EOS continuation object (values are tagged):
-        // object, bool, 1, bool(mode), 1, milliseconds, null, 1, ...
-        // The second boolean selects Follow (false) vs Hang (true). Some EOS versions
-        // appear to duplicate mode state, so either boolean being true is treated as Hang.
+        // object, bool, 1, bool, 1, milliseconds, mode, 1, ...
+        //
+        // Real EOS 3.3.5 exports encode the mode immediately after the duration:
+        //   0x04 = Follow
+        //   0x00 = Hang
+        //
+        // Older/synthetic variants may additionally encode Hang in either boolean.
         for (var candidate = start; candidate < end; candidate++)
         {
             if (data[candidate] != 0x02) continue;
@@ -104,15 +108,16 @@ internal static class Esf3dCueHeaderDecoder
                 || milliseconds <= 0
                 || milliseconds > 86_400_000
                 || offset >= end
-                || data[offset] != 0x04)
+                || data[offset] is not (0x00 or 0x04))
                 continue;
 
+            var isHang = data[offset] == 0x00 || firstModeFlag || secondModeFlag;
             offset++;
             if (!TryReadUnsigned(data, offset, end, out var trailerMarker, out _)
                 || trailerMarker != 1)
                 continue;
 
-            value = FormatFollowOrHang(firstModeFlag || secondModeFlag, milliseconds);
+            value = FormatFollowOrHang(isHang, milliseconds);
             return true;
         }
 

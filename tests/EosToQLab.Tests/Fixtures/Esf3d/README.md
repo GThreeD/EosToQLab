@@ -13,3 +13,12 @@ The unit tests never require a running ETC Eos installation.
 
 This creates a compatibility corpus: CI checks old encodings forever, while a newly exported fixture is the only manual
 step when ETC changes the proprietary format.
+
+## EOS 3.3.5 Build 69 cue-901 regression corpus
+
+The base fixture contains seven real cues plus unrelated effect/reference records that reuse the numbers 901, 902, and
+
+903. Two additional exports add a real cue 901, once without a label and once with label `test`.
+
+The parser must identify the complete cue-record trailer instead of accepting the number marker alone. It must also stop
+the final cue at its actual record boundary, so later global effect text is never attached as cue scene text.
