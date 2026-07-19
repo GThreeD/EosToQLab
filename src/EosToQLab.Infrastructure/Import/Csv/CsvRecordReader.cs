@@ -67,7 +67,7 @@ internal static class CsvRecordReader
     }
 
     private static void CompleteRow(
-        ICollection<IReadOnlyList<string>> records,
+        List<IReadOnlyList<string>> records,
         List<string> row,
         StringBuilder field)
     {

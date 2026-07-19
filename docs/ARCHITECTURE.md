@@ -39,7 +39,7 @@ Contains implementation details:
   communication;
 - centralized protocol names in `QLabProtocol`.
 
-### EosToQLab.App
+### EosToQLab.Application
 
 A macOS-only .NET MAUI Blazor Hybrid application. Razor components handle the workflow:
 
@@ -120,3 +120,13 @@ convention. Every write is serialized and paired with a reply. QLab reply JSON i
 converted into dedicated application exceptions.
 
 No AppleScript or UI scripting is used.
+
+## Test architecture
+
+`EosToQLab.Tests` is a cross-platform xUnit project referencing Core and Infrastructure only. This keeps parser,
+planner, transport, and workflow tests independent from the MAUI workload. Pure preview state and passcode-cache
+behavior live in Core so they remain directly unit-testable.
+
+A convention test requires one dedicated test class and source file per production type. ESF3D compatibility is
+maintained through deterministic synthetic fixtures and immutable, versioned golden-master exports; no CI job launches
+Eos.

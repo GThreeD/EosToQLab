@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+        <IsTestProject>true</IsTestProject>
+        <RootNamespace>EosToQLab.Tests</RootNamespace>
+        <CollectCoverage>true</CollectCoverage>
+        <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+        <Threshold>100</Threshold>
+        <ThresholdType>line</ThresholdType>
+        <ThresholdStat>total</ThresholdStat>
+        <Include>[EosToQLab.Core]*,[EosToQLab.Infrastructure]*</Include>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
+        <PackageReference Include="xunit.v3" Version="3.2.2"/>
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="coverlet.msbuild" Version="6.0.4">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="../../src/EosToQLab.Core/EosToQLab.Core.csproj"/>
+        <ProjectReference Include="../../src/EosToQLab.Infrastructure/EosToQLab.Infrastructure.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="../../samples/reference-eos.csv" Link="Fixtures/Csv/reference-eos.csv" CopyToOutputDirectory="PreserveNewest"/>
+        <None Update="Fixtures/Esf3d/**/*.esf3d" CopyToOutputDirectory="PreserveNewest"/>
+        <None Update="Fixtures/Esf3d/**/*.json" CopyToOutputDirectory="PreserveNewest"/>
+        <None Update="Fixtures/Esf3d/**/*.md" CopyToOutputDirectory="PreserveNewest"/>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <NoWarn>$(NoWarn);CA1707</NoWarn>
+    </PropertyGroup>
+</Project>

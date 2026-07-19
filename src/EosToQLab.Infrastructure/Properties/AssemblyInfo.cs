@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("EosToQLab.SelfTests")]
+[assembly: InternalsVisibleTo("EosToQLab.Tests")]

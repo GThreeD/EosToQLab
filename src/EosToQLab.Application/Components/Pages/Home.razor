@@ -352,9 +352,7 @@
             throw new InvalidOperationException($"The selected source exceeds the {MaximumSourceSize / 1024 / 1024} MB limit.");
         }
 
-        var initialCapacity = sourceSize.HasValue
-                              && sourceSize.Value > 0
-                              && sourceSize.Value <= int.MaxValue
+        var initialCapacity = sourceSize is > 0 and <= int.MaxValue
             ? (int)sourceSize.Value
             : 0;
         using var content = new MemoryStream(initialCapacity);

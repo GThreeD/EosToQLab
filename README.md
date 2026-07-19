@@ -40,11 +40,14 @@ src/
 │   ├── CSV import
 │   ├── ESF3D import
 │   └── QLab OSC
-└── EosToQLab.App
+└── EosToQLab.Application
     └── MAUI Blazor Hybrid UI for macOS
 
 tests/
-└── EosToQLab.SelfTests
+└── EosToQLab.Tests
+    ├── one xUnit test file per production type
+    ├── versioned ESF3D compatibility fixtures
+    └── Coverlet line-coverage gate
 ```
 
 The structure is intentionally limited to three production projects. There is no separate project for every technical layer.
@@ -153,19 +156,31 @@ See [docs/QLAB_SAFETY.md](docs/QLAB_SAFETY.md).
 
 ```bash
 dotnet workload install maui
-dotnet restore EosToQLab.sln
+dotnet restore EosToQLab.slnx
 ```
 
-Run the source/import self-tests:
+Run the xUnit suite:
 
 ```bash
-dotnet run --project tests/EosToQLab.SelfTests/EosToQLab.SelfTests.csproj -c Release
+dotnet test tests/EosToQLab.Tests/EosToQLab.Tests.csproj -c Release
+```
+
+Run the same 100% line-coverage gate used by CI:
+
+```bash
+dotnet test tests/EosToQLab.Tests/EosToQLab.Tests.csproj -c Release \
+  -p:CollectCoverage=true \
+  -p:CoverletOutputFormat=cobertura \
+  -p:Threshold=100 \
+  -p:ThresholdType=line \
+  -p:ThresholdStat=total \
+  '-p:Include=[EosToQLab.Core]*,[EosToQLab.Infrastructure]*'
 ```
 
 Run the app:
 
 ```bash
-dotnet build src/EosToQLab.App/EosToQLab.App.csproj \
+dotnet build src/EosToQLab.Application/EosToQLab.Application.csproj \
   -f net10.0-maccatalyst \
   -t:Run
 ```
@@ -191,6 +206,7 @@ Artifacts are copied to `dist/`. Local output is ad-hoc signed. Public distribut
 - [Architecture](docs/ARCHITECTURE.md)
 - [QLab safety and conflict handling](docs/QLAB_SAFETY.md)
 - [Build and validation](docs/BUILD_AND_TEST.md)
+- [Testing strategy and ESF3D compatibility](docs/TESTING.md)
 
 ## Import UI
 

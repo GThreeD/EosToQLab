@@ -2,34 +2,67 @@
 
 ## Restore
 
+The cross-platform unit tests do not require the MAUI workload:
+
+```bash
+dotnet restore tests/EosToQLab.Tests/EosToQLab.Tests.csproj
+```
+
+The macOS application does:
+
 ```bash
 dotnet workload install maui
-dotnet restore EosToQLab.sln
+dotnet restore src/EosToQLab.Application/EosToQLab.Application.csproj
 ```
 
-## Cross-platform source tests
+## xUnit tests
 
-The self-test console project has no external test-framework dependency. It checks:
-
-- factory selection for `.csv` and `.esf3d`;
-- mapping of the reference EOS CSV;
-- cue-part aggregation;
-- fixed scene-text, label, and cue-notes mapping;
-- the synthetic ESF3D fixture, including cue notes and Follow/Hang;
-- current ESF3D continuation-object decoding and complete Follow/Hang chains;
-- both Follow/Hang policies: exclude and import disarmed;
-- scene Memo-cue de-duplication and empty Memo notes;
-- the ordered EOS Network-cue parameter stack, including the optional User field;
-- exact QLab number attempts and conflict fallback to an unnumbered cue.
+The former console-based self-test runner has been replaced by `EosToQLab.Tests`, using xUnit, `Microsoft.NET.Test.Sdk`,
+and Coverlet. This provides test discovery in IDEs, isolated failures, standard CI reports, filtering, and
+machine-enforced coverage instead of one manually maintained `Program.cs`.
 
 ```bash
-dotnet run --project tests/EosToQLab.SelfTests/EosToQLab.SelfTests.csproj -c Release
+dotnet test tests/EosToQLab.Tests/EosToQLab.Tests.csproj -c Release
 ```
+
+Every top-level type in `EosToQLab.Core` and `EosToQLab.Infrastructure` has a dedicated `<TypeName>Tests.cs` file.
+`ProductionTypeTestConventionTests` checks both the test-class and file-name convention, so a newly added production
+type without a corresponding test fails CI.
+
+## 100% coverage gate
+
+CI measures the business and infrastructure assemblies and rejects less than 100% line coverage:
+
+```bash
+dotnet test tests/EosToQLab.Tests/EosToQLab.Tests.csproj -c Release \
+  -p:CollectCoverage=true \
+  -p:CoverletOutput=artifacts/coverage/coverage.cobertura.xml \
+  -p:CoverletOutputFormat=cobertura \
+  -p:Threshold=100 \
+  -p:ThresholdType=line \
+  -p:ThresholdStat=total \
+  '-p:Include=[EosToQLab.Core]*,[EosToQLab.Infrastructure]*'
+```
+
+The MAUI application shell is intentionally outside the unit-coverage denominator. It consists of platform bootstrap,
+XAML-generated code, and the WebView host. Its pure state and workflow logic lives in Core/Infrastructure and is covered
+by xUnit; the shell itself is verified by the macOS build job and manual UI checks. This avoids claiming meaningful unit
+coverage for generated or operating-system-owned UI behavior.
+
+## ESF3D compatibility tests
+
+No test requires an installed or running ETC Eos instance. Tests use two complementary fixture types:
+
+1. deterministic synthetic fixtures for every known binary encoding and parser error path;
+2. immutable, versioned golden-master exports with an `expected.json` contract.
+
+When a new Eos version changes `.esf3d`, add a minimal sanitized export under a new fixture directory rather than
+replacing an old fixture. See [TESTING.md](TESTING.md).
 
 ## Build the macOS app
 
 ```bash
-dotnet build src/EosToQLab.App/EosToQLab.App.csproj \
+dotnet build src/EosToQLab.Application/EosToQLab.Application.csproj \
   -f net10.0-maccatalyst \
   -c Release
 ```
@@ -57,6 +90,6 @@ dotnet build src/EosToQLab.App/EosToQLab.App.csproj \
 10. Test without an open workspace and verify `QLabNoOpenWorkspaceException`.
 11. Load the supplied Follow-chain sample and verify both dropdown modes: exclusion removes 83.2, 83.3, and 84; disarmed
     mode creates them with Armed off.
-12. Use the native source button and confirm that both `.csv` and `.esf3d` files are selectable.
+12. Drag both `.csv` and `.esf3d` files onto the drop zone and also select them through the file dialog.
 13. Inspect one generated EOS Network cue: Type `Cues`, Specify user `No`, Command `Run cue in specific list`, then the
     expected List and Cue values.

@@ -48,7 +48,7 @@ public sealed class CsvEosCueImporter : IEosCueImporter
         if (startIndex + 1 >= records.Count) throw new CsvHeaderMissingException(request.FileName);
 
         var columns = CreateColumnMap(records[startIndex + 1]);
-        var missing = Binder.FindMissingRequiredColumns(columns);
+        var missing = EosCsvObjectBinder<EosCsvCue>.FindMissingRequiredColumns(columns);
         if (missing.Count > 0) throw new CsvRequiredColumnMissingException(request.FileName, missing);
 
         var diagnostics = new List<EosDiagnostic>();
@@ -68,7 +68,7 @@ public sealed class CsvEosCueImporter : IEosCueImporter
         {
             cancellationToken.ThrowIfCancellationRequested();
             var rowNumber = recordIndex + 1;
-            var csvCue = Binder.Bind(records[recordIndex], columns, rowNumber);
+            var csvCue = EosCsvObjectBinder<EosCsvCue>.Bind(records[recordIndex], columns, rowNumber);
             if (!string.Equals(csvCue.TargetTypeAsText, "Cue", StringComparison.OrdinalIgnoreCase)) continue;
 
             if (string.IsNullOrWhiteSpace(csvCue.TargetId))
@@ -90,9 +90,9 @@ public sealed class CsvEosCueImporter : IEosCueImporter
             $"EOS CSV: {request.FileName}");
     }
 
-    private static IReadOnlyList<EosCue> AggregateAndMap(
+    private static List<EosCue> AggregateAndMap(
         IReadOnlyList<(EosCsvCue Cue, int RowNumber, int SourceOrder)> rows,
-        ICollection<EosDiagnostic> diagnostics)
+        List<EosDiagnostic> diagnostics)
     {
         var grouped = rows
             .GroupBy(row => BuildIdentity(row.Cue), StringComparer.OrdinalIgnoreCase)
@@ -127,7 +127,7 @@ public sealed class CsvEosCueImporter : IEosCueImporter
         return result;
     }
 
-    private static IReadOnlyDictionary<string, string?> BuildAdditionalValues(EosCsvCue cue)
+    private static Dictionary<string, string?> BuildAdditionalValues(EosCsvCue cue)
     {
         return new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {
@@ -185,7 +185,7 @@ public sealed class CsvEosCueImporter : IEosCueImporter
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
-    private static IReadOnlyDictionary<string, int> CreateColumnMap(IReadOnlyList<string> header)
+    private static Dictionary<string, int> CreateColumnMap(IReadOnlyList<string> header)
     {
         return header.Select((name, index) => (Name: name.Trim(), Index: index))
             .Where(item => item.Name.Length > 0)

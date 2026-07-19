@@ -1,33 +1,32 @@
 # Validation report
 
+The test migration adds these automated checks:
+
+- xUnit discovery through `Microsoft.NET.Test.Sdk`;
+- one dedicated test class and file for every top-level Core and Infrastructure type;
+- parser, planning, mapper, workflow, rollback, OSC codec, SLIP framing, TCP transport, JSON reply, and exception tests;
+- deterministic synthetic ESF3D tests;
+- an immutable ESF3D golden-master contract;
+- a Coverlet Cobertura report;
+- a CI failure threshold of 100% line coverage for `EosToQLab.Core` and `EosToQLab.Infrastructure`;
+- macOS publishing only after the test job succeeds.
+
 Validation performed in the generation environment:
 
-- JSON files parsed successfully.
-- XAML, project files, and property lists parsed successfully as XML.
-- GitHub Actions workflow parsed successfully as YAML.
-- Packaging script passed `bash -n`.
-- All C# files passed a lightweight delimiter, string, character, and comment balance scan.
-- No Avalonia, `osascript`, or Apple Events entitlement references remain in production source.
-- The synthetic `.esf3d` fixture is a valid ZIP archive containing `showdat.dat`.
-- The supplied Python parser recovered 3 cues, 3 cue labels, and 3 scene labels from the synthetic fixture.
-- The CSV fixture contains 5 cue rows that aggregate into 4 common cues and 1 merged cue-part row.
+- project and solution references were updated from `EosToQLab.SelfTests` to `EosToQLab.Tests`;
+- every detected top-level Core/Infrastructure declaration has a matching `<TypeName>Tests.cs` file;
+- JSON files parsed successfully;
+- XAML, project files, and property lists parsed successfully as XML;
+- the GitHub Actions workflow parsed successfully as YAML;
+- the packaging script passed `bash -n`;
+- the synthetic `.esf3d` fixture is a valid ZIP archive containing `showdat.dat`;
+- patch application and archive integrity are checked before delivery.
 
 Not performed in this environment:
 
-- C# compilation, because a .NET SDK was not available in the Linux runtime and external binary installation was
-  blocked.
-- Mac Catalyst compilation, signing, or notarization, which require macOS and Xcode.
-- Live QLab OSC integration, which requires QLab 5 running on macOS.
+- executing `dotnet test`, because no .NET 10 SDK is installed in the runtime;
+- Mac Catalyst compilation, signing, or notarization, which require macOS and Xcode;
+- live QLab OSC integration, which requires QLab 5 running on macOS.
 
-The repository includes a macOS GitHub Actions workflow and a manual QLab integration test plan for these remaining
-checks.
-
-## v10 validation additions
-
-- Plan-builder self-test verifies that deselecting a Follow cue does not break classification of its following cue.
-- Static checks verify that network patches are selected by QLab unique ID rather than free-text matching.
-- Passcode storage is isolated behind `IQLabPasscodeStore`. The default `SessionQLabPasscodeStore` is process-local and
-  expires values after 24 hours. The optional Keychain-backed `MauiSecurePasscodeStore` is present but not registered
-  and requires a signed Mac Catalyst runtime test before enabling.
-- The tri-state master checkbox uses a small JavaScript bridge because HTML exposes `indeterminate` as a DOM property
-  rather than a persistent attribute.
+The GitHub Actions workflow performs the actual xUnit run, coverage gate, and Mac Catalyst publish on supported runners.
+Until that workflow passes, 100% coverage is a configured requirement rather than a locally measured claim.
