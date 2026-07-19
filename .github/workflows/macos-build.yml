@@ -20,7 +20,7 @@ jobs:
       - name: Install MAUI workload
         run: dotnet workload install maui
       - name: Restore
-        run: dotnet restore EosToQLab.sln
+        run: dotnet restore EosToQLab.slnx
       - name: Run self-tests
         run: dotnet run --project tests/EosToQLab.SelfTests/EosToQLab.SelfTests.csproj -c Release
       - name: Publish
