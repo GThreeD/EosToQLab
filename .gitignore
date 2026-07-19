@@ -1,7 +1,8 @@
 **/bin/
 **/obj/
 .vs/
-.idea/
+.idea/*
+!.idea/icon.svg
 .DS_Store
 dist/
 *.user
