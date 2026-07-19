@@ -156,7 +156,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         for (var index = 0; index < run.Count; index++)
         {
             var number = run[index];
-            var recordStart = number.Offset - CueMarker.Length;
+            var recordStart = number.MarkerOffset;
             var recordEnd = number.RecordEnd;
 
             var recordFields = fields
@@ -221,8 +221,20 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
             {
                 var nextMarkerOffset = FindPattern(data, CueMarker, markerOffset + 1);
                 var recordBoundary = nextMarkerOffset >= 0 ? nextMarkerOffset : data.Length;
-                if (TryFindCueRecordEnd(data, end, recordBoundary, out var recordEnd))
-                    result.Add(new NumberCandidate(numberOffset, rawValue, end, recordEnd));
+                // The canonical trailer is a strong cue-list anchor, but real EOS records
+                // may contain additional payload before the next cue marker. In that case
+                // the fully decoded cue header is sufficient to keep the record candidate.
+                var hasCanonicalTrailer =
+                    TryFindCueRecordEnd(data, end, recordBoundary, out _);
+                var header = Esf3dCueHeaderDecoder.Decode(data, end, recordBoundary);
+                if (hasCanonicalTrailer || header.Parsed)
+                    result.Add(new NumberCandidate(
+                        markerOffset,
+                        numberOffset,
+                        rawValue,
+                        end,
+                        recordBoundary,
+                        hasCanonicalTrailer));
             }
 
             position = markerOffset + 1;
@@ -233,10 +245,15 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
 
     private static List<NumberCandidate> SelectMainCueRun(List<NumberCandidate> candidates)
     {
+        // Rank structurally adjacent runs by their canonical cue-record anchors. This keeps
+        // header-valid record variants in the cue list without selecting EOS effect records
+        // that reuse cue-like numbers but do not contain canonical cue anchors.
         return SplitMonotonicRuns(candidates)
             .Where(run => run.All(item => item.RawValue % 10 == 0))
-            .OrderByDescending(run => run.Count)
-            .ThenByDescending(run => run[^1].Offset - run[0].Offset)
+            .Where(run => run.Any(item => item.HasCanonicalTrailer))
+            .OrderByDescending(run => run.Count(item => item.HasCanonicalTrailer))
+            .ThenByDescending(run => run.Count)
+            .ThenByDescending(run => run[^1].MarkerOffset - run[0].MarkerOffset)
             .FirstOrDefault() ?? [];
     }
 
@@ -292,8 +309,11 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         {
             var candidate = candidates[index];
             var previous = current[^1];
-            var offsetGap = candidate.Offset - previous.Offset;
-            if (candidate.RawValue > previous.RawValue && offsetGap is > 0 and <= 131_072)
+            var offsetGap = candidate.MarkerOffset - previous.MarkerOffset;
+            var structurallyAdjacent = previous.RecordEnd == candidate.MarkerOffset;
+            if (structurallyAdjacent
+                && candidate.RawValue > previous.RawValue
+                && offsetGap is > 0 and <= 131_072)
             {
                 current.Add(candidate);
             }
@@ -424,7 +444,13 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         public int End => Offset + ByteLength;
     }
 
-    private sealed record NumberCandidate(int Offset, int RawValue, int End, int RecordEnd);
+    private sealed record NumberCandidate(
+        int MarkerOffset,
+        int Offset,
+        int RawValue,
+        int End,
+        int RecordEnd,
+        bool HasCanonicalTrailer);
 
     private sealed record RecoveredCue(
         int RawCueNumber,

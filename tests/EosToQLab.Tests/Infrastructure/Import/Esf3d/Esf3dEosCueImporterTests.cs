@@ -122,6 +122,35 @@ public sealed class Esf3dEosCueImporterTests
     }
 
     [Fact]
+    public async Task Keeps_header_valid_cues_when_only_some_records_have_the_canonical_trailer()
+    {
+        var fixture = TestData.FixturePath(
+            "Esf3d",
+            "dense-cue-record-variants-3.3.5.esf3d");
+        await using var stream = File.OpenRead(fixture);
+
+        var result = await _sut.ImportAsync(
+            new EosImportRequest(Path.GetFileName(fixture), stream),
+            TestContext.Current.CancellationToken);
+
+        string[] expectedCueNumbers =
+        [
+            "1", "2", "3", "4",
+            "10", "11", "12",
+            "20", "21", "21.5", "22", "23",
+            "30", "31", "32",
+            "40", "40.1", "40.2", "41", "42", "43", "44", "45", "46",
+            "80", "81", "82", "83", "83.1", "83.2", "83.3", "84", "85",
+            "90", "91", "92", "93",
+            "100", "101"
+        ];
+
+        Assert.Equal(expectedCueNumbers, result.Cues.Select(cue => cue.CueNumber));
+        Assert.Contains(result.Cues, cue => cue.CueNumber == "42");
+        Assert.Contains(result.Cues, cue => cue.CueNumber == "46");
+    }
+
+    [Fact]
     public async Task Ignores_a_number_marker_with_an_invalid_cue_record_trailer()
     {
         byte[] showData =

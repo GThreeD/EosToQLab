@@ -57,10 +57,12 @@ class TextField:
 
 @dataclass(frozen=True)
 class NumberCandidate:
+    marker_offset: int
     offset: int
     raw_value: int
     end: int
     record_end: int
+    has_canonical_trailer: bool
 
 
 @dataclass(frozen=True)
@@ -159,6 +161,53 @@ def decode_tagged_unsigned(data: bytes, offset: int) -> tuple[int, int] | None:
     return int.from_bytes(data[start:end], "little"), end
 
 
+
+
+def skip_value(data: bytes, offset: int, boundary: int) -> int | None:
+    if offset >= boundary:
+        return None
+
+    tag = data[offset]
+    if tag in {0x00, 0x02, 0x04}:
+        length = 1
+    elif tag in {0x01, 0x08}:
+        length = 2
+    elif tag == 0x09:
+        length = 3
+    elif tag == 0x0A:
+        length = 4
+    elif tag == 0x06:
+        length = 9
+    elif tag == TEXT_TAG and offset + 2 < boundary:
+        length = 3 + int.from_bytes(data[offset + 1 : offset + 3], "little") * 2
+    else:
+        return None
+
+    end = offset + length
+    return end if end <= boundary else None
+
+
+def has_cue_header_shape(data: bytes, number_end: int, boundary: int) -> bool:
+    offset = number_end
+    for _ in range(5):
+        next_offset = skip_value(data, offset, boundary)
+        if next_offset is None:
+            return False
+        offset = next_offset
+
+    if offset >= boundary or data[offset] != 0x02:
+        return False
+    offset += 1
+
+    for _ in range(13):
+        next_offset = skip_value(data, offset, boundary)
+        if next_offset is None:
+            return False
+        offset = next_offset
+
+    return True
+
+
 def scene_value_end(data: bytes, offset: int, boundary: int) -> int | None:
     if offset >= boundary:
         return None
@@ -198,9 +247,18 @@ def cue_number_candidates(data: bytes) -> list[NumberCandidate]:
             if CUE_SCALE <= value <= 99_999_999:
                 next_marker = data.find(CUE_MARKER, marker_offset + 1)
                 boundary = next_marker if next_marker >= 0 else len(data)
-                record_end = find_cue_record_end(data, end, boundary)
-                if record_end is not None:
-                    result.append(NumberCandidate(number_offset, value, end, record_end))
+                has_canonical_trailer = find_cue_record_end(data, end, boundary) is not None
+                if has_canonical_trailer or has_cue_header_shape(data, end, boundary):
+                    result.append(
+                        NumberCandidate(
+                            marker_offset,
+                            number_offset,
+                            value,
+                            end,
+                            boundary,
+                            has_canonical_trailer,
+                        )
+                    )
         position = marker_offset + 1
     return result
 
@@ -212,8 +270,13 @@ def split_monotonic_runs(candidates: list[NumberCandidate]) -> list[list[NumberC
     current = [candidates[0]]
     for candidate in candidates[1:]:
         previous = current[-1]
-        offset_gap = candidate.offset - previous.offset
-        if candidate.raw_value > previous.raw_value and 0 < offset_gap <= 131_072:
+        offset_gap = candidate.marker_offset - previous.marker_offset
+        structurally_adjacent = previous.record_end == candidate.marker_offset
+        if (
+            structurally_adjacent
+            and candidate.raw_value > previous.raw_value
+            and 0 < offset_gap <= 131_072
+        ):
             current.append(candidate)
         else:
             runs.append(current)
@@ -227,10 +290,18 @@ def select_main_cue_run(candidates: list[NumberCandidate]) -> list[NumberCandida
         run
         for run in split_monotonic_runs(candidates)
         if all(item.raw_value % 10 == 0 for item in run)
+        and any(item.has_canonical_trailer for item in run)
     ]
     if not plausible:
         return []
-    return max(plausible, key=lambda run: (len(run), run[-1].offset - run[0].offset))
+    return max(
+        plausible,
+        key=lambda run: (
+            sum(item.has_canonical_trailer for item in run),
+            len(run),
+            run[-1].marker_offset - run[0].marker_offset,
+        ),
+    )
 
 
 def format_cue_number(raw_value: int) -> str:
@@ -258,7 +329,7 @@ def extract_cues(data: bytes, fields: list[TextField]) -> list[Cue]:
     result: list[Cue] = []
 
     for index, number in enumerate(run):
-        record_start = number.offset - len(CUE_MARKER)
+        record_start = number.marker_offset
         record_end = number.record_end
 
         record_fields = [
