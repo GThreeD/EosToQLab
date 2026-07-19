@@ -17,7 +17,7 @@ Contains stable application concepts:
 
 - `EosCue` and result models;
 - `IEosCueImporter` and `IEosCueImporterFactory`;
-- `IQLabService`;
+- `IQLabService` as the application-facing facade;
 - `IQLabImportPlanBuilder`;
 - diagnostic and exception types.
 
@@ -32,7 +32,11 @@ Contains implementation details:
 - `EosCueImporterFactory`;
 - OSC encoding/decoding;
 - double-END SLIP framing for QLab TCP;
-- `QLabOscService`.
+- `QLabService` as the application-facing facade;
+- `QLabImportWorkflow` for import orchestration and rollback;
+- declarative plan-item mappers and `QLabImportPlanExecutor`;
+- `IQLabOscService`/`QLabOscService` and connection-bound `IQLabOscSession`/`QLabOscSession` for direct OSC communication;
+- centralized protocol names in `QLabProtocol`.
 
 ### EosToQLab.App
 
@@ -77,8 +81,27 @@ After parsing and cue-part aggregation, source rows are mapped into `EosCue`. ES
 
 Follow/Hang state is tracked per EOS cue-list number. The state is updated for every EOS cue, including a cue that is skipped because the previous cue had Follow/Hang. This prevents the permanent-block bug from the original AppleScript.
 
+## QLab execution layers
+
+```text
+IQLabService / QLabService
+    -> QLabImportWorkflow
+        -> QLabImportPlanBuilder
+        -> QLabImportPlanExecutor
+            -> IQLabPlanItemMapper implementations
+            -> QLabCueCreationRequest
+        -> QLabOscSession
+    -> QLabOscService (workspace discovery and session creation)
+```
+
+The workflow owns conflict handling, temporary cue-list creation, save behavior, and rollback. It does not build OSC addresses or know QLab property strings.
+
+Each plan-item mapper converts one plan type into a declarative `QLabCueCreationRequest`. Adding a new plan-item type requires a new mapper registration rather than modifying a central switch statement.
+
+`QLabOscSession` contains the direct, connection-bound QLab operations. `QLabProtocol` is the single translation point from typed enums such as `QLabCueProperty.NetworkPatchId` to QLab's OSC names such as `networkPatchID`.
+
 ## QLab transport
 
-The service uses TCP on localhost and enables `/alwaysReply`. OSC packets are framed using QLab's double-END SLIP convention. Every write is serialized and paired with a reply. QLab reply JSON is parsed and converted into dedicated application exceptions.
+The OSC layer uses TCP on localhost and enables `/alwaysReply`. OSC packets are framed using QLab's double-END SLIP convention. Every write is serialized and paired with a reply. QLab reply JSON is parsed by `QLabJsonParser` and converted into dedicated application exceptions.
 
 No AppleScript or UI scripting is used.

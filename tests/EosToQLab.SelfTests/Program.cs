@@ -5,6 +5,8 @@ using EosToQLab.Core.Planning;
 using EosToQLab.Infrastructure.Import;
 using EosToQLab.Infrastructure.Import.Csv;
 using EosToQLab.Infrastructure.Import.Esf3d;
+using EosToQLab.Infrastructure.QLab;
+using EosToQLab.Infrastructure.QLab.Workflow;
 
 var tests = new List<(string Name, Func<Task> Run)>
 {
@@ -12,7 +14,9 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("Reference EOS CSV maps into the common cue model", TestCsvAsync),
     ("Synthetic ESF3D maps into the common cue model", TestEsf3dAsync),
     ("Follow/hang skips exactly one following cue", TestFollowLogicAsync),
-    ("Scene text creates memo cues without duplication", TestSceneTextAsync)
+    ("Scene text creates memo cues without duplication", TestSceneTextAsync),
+    ("Memo plan maps to declarative QLab properties", TestMemoMapperAsync),
+    ("Network plan maps to properties and network parameters", TestNetworkMapperAsync)
 };
 
 var failures = new List<string>();
@@ -107,6 +111,44 @@ static Task TestSceneTextAsync()
     var memos = plan.Items.OfType<QLabMemoCuePlan>().ToArray();
     Assert(memos.Length == 2, "Repeated scene text created duplicate memo cues.");
     Assert(memos[0].Name == "Scene A" && memos[1].Name == "Scene B", "Scene memo order is incorrect.");
+    return Task.CompletedTask;
+}
+
+static Task TestMemoMapperAsync()
+{
+    var request = new QLabMemoCuePlanMapper().Map(
+        new QLabMemoCuePlan("Scene A", "From EOS"),
+        new QLabPlanExecutionContext(new QLabNetworkPatch("patch", "EOS", "eos")));
+
+    Assert(request.CueType == QLabCueType.Memo, "Memo cue type was not mapped.");
+    Assert(request.CueProperties.Any(property =>
+        property.Property == QLabCueProperty.Name
+        && Equals(property.Value, "Scene A")), "Memo name property is missing.");
+    Assert(request.CueProperties.Any(property =>
+        property.Property == QLabCueProperty.Number
+        && Equals(property.Value, string.Empty)), "Memo number reset is missing.");
+    Assert(request.NetworkParameters.Count == 0, "Memo mapping created network parameters.");
+    return Task.CompletedTask;
+}
+
+static Task TestNetworkMapperAsync()
+{
+    var patch = new QLabNetworkPatch("patch-id", "EOS", "eos");
+    var request = new QLabNetworkCuePlanMapper().Map(
+        new QLabNetworkCuePlan("LX 1/2", "1", "2", "Notes"),
+        new QLabPlanExecutionContext(patch));
+
+    Assert(request.CueType == QLabCueType.Network, "Network cue type was not mapped.");
+    Assert(request.ExpectedNetworkPatch == patch, "Expected network patch is missing.");
+    Assert(request.CueProperties.Any(property =>
+        property.Property == QLabCueProperty.NetworkPatchId
+        && Equals(property.Value, patch.Id)), "Network patch property is missing.");
+    Assert(request.NetworkParameters.Any(parameter =>
+        parameter.Parameter == QLabNetworkParameter.CueListNumber
+        && parameter.Value == "1"), "Cue-list parameter is missing.");
+    Assert(request.NetworkParameters.Any(parameter =>
+        parameter.Parameter == QLabNetworkParameter.CueNumber
+        && parameter.Value == "2"), "Cue-number parameter is missing.");
     return Task.CompletedTask;
 }
 

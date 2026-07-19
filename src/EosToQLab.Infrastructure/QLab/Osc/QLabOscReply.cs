@@ -1,5 +1,6 @@
 using System.Text.Json;
 using EosToQLab.Core.Exceptions;
+using EosToQLab.Infrastructure.QLab;
 
 namespace EosToQLab.Infrastructure.QLab.Osc;
 
@@ -14,12 +15,12 @@ internal sealed class QLabOscReply : IDisposable
     public string Address { get; }
     public JsonDocument Document { get; }
     public JsonElement Root => Document.RootElement;
-    public string Status => Root.TryGetProperty("status", out var status) ? status.GetString() ?? string.Empty : string.Empty;
-    public JsonElement Data => Root.TryGetProperty("data", out var data) ? data : default;
+    public string Status => Root.TryGetProperty(QLabProtocol.Reply.StatusField, out var status) ? status.GetString() ?? string.Empty : string.Empty;
+    public JsonElement Data => Root.TryGetProperty(QLabProtocol.Reply.DataField, out var data) ? data : default;
 
     public static QLabOscReply Parse(OscMessage message)
     {
-        if (!message.Address.StartsWith("/reply", StringComparison.Ordinal))
+        if (!message.Address.StartsWith(QLabProtocol.Addresses.ReplyPrefix, StringComparison.Ordinal))
         {
             throw new QLabUnexpectedReplyException(message.Address, "The OSC message is not a QLab reply.");
         }
@@ -42,14 +43,14 @@ internal sealed class QLabOscReply : IDisposable
     public void EnsureOk(string workspaceName)
     {
         var dataText = Data.ValueKind == JsonValueKind.String ? Data.GetString() : null;
-        if (string.Equals(Status, "denied", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(Status, "badpass", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(dataText, "badpass", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(Status, QLabProtocol.Reply.DeniedStatus, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Status, QLabProtocol.Reply.BadPassStatus, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(dataText, QLabProtocol.Reply.BadPassStatus, StringComparison.OrdinalIgnoreCase))
         {
             throw new QLabAccessDeniedException(workspaceName);
         }
 
-        if (string.Equals(Status, "ok", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(Status, QLabProtocol.Reply.OkStatus, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }

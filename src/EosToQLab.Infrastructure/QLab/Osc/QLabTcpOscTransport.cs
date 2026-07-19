@@ -48,7 +48,7 @@ internal sealed class QLabTcpOscTransport(
             {
                 var replyFrame = await SlipCodec.ReadFrameAsync(stream, timeoutSource.Token);
                 var decoded = OscCodec.Decode(replyFrame);
-                if (!decoded.Address.StartsWith("/reply", StringComparison.Ordinal))
+                if (!decoded.Address.StartsWith(QLabProtocol.Addresses.ReplyPrefix, StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -79,7 +79,7 @@ internal sealed class QLabTcpOscTransport(
         {
             try
             {
-                var frame = SlipCodec.Frame(OscCodec.Encode(new OscMessage("/disconnect")));
+                var frame = SlipCodec.Frame(OscCodec.Encode(new OscMessage(QLabProtocol.Addresses.Disconnect)));
                 await _stream.WriteAsync(frame);
                 await _stream.FlushAsync();
             }
