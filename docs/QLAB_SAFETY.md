@@ -68,5 +68,6 @@ as an aggregate inner exception. The user should then inspect the QLab workspace
 
 ## Remaining integration requirement
 
-OSC behavior must be validated against the exact installed QLab 5 version on macOS. The included self-tests validate
+OSC behavior must be validated against the exact installed QLab 5 version on macOS. The included xUnit test suite
+validates
 parsers, factory selection, Follow/Hang planning, and scene handling, but they do not emulate QLab's live OSC server.

@@ -5,7 +5,7 @@ namespace EosToQLab.Infrastructure.QLab.Workflow;
 
 public sealed class QLabImportPlanExecutor
 {
-    private readonly IReadOnlyDictionary<Type, IQLabPlanItemMapper> _mappers;
+    private readonly Dictionary<Type, IQLabPlanItemMapper> _mappers;
 
     public QLabImportPlanExecutor(IEnumerable<IQLabPlanItemMapper> mappers)
     {

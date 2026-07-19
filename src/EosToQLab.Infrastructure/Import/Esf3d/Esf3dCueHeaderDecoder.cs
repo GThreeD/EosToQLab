@@ -222,7 +222,7 @@ internal static class Esf3dCueHeaderDecoder
             valueEnd = offset;
         }
 
-        if (!isHang.HasValue && numbers.Count >= 2 && numbers[0] is 0 or 1)
+        if (!isHang.HasValue && numbers is [0 or 1, _, ..])
         {
             isHang = numbers[0] == 1;
             numbers.RemoveAt(0);

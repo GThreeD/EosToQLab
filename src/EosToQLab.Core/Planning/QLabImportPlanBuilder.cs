@@ -55,7 +55,7 @@ public sealed class QLabImportPlanBuilder : IQLabImportPlanBuilder
     }
 
     private static void AddSceneMemoIfNeeded(
-        ICollection<QLabPlanItem> items,
+        List<QLabPlanItem> items,
         EosCue cue,
         QLabImportOptions options,
         ref string? previousScene)

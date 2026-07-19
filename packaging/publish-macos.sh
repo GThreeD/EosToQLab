@@ -9,7 +9,7 @@ case "$architecture" in
 esac
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-project="$root/src/EosToQLab.App/EosToQLab.App.csproj"
+project="$root/src/EosToQLab.Application/EosToQLab.Application.csproj"
 publish_dir="$root/artifacts/publish/$runtime"
 dist_dir="$root/dist"
 

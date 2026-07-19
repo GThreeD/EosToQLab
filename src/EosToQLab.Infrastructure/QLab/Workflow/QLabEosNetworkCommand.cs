@@ -117,7 +117,7 @@ public sealed record QLabEosNetworkCommand(
     }
 
     private static void Add(
-        ICollection<QLabNetworkParameterAssignment> target,
+        List<QLabNetworkParameterAssignment> target,
         QLabEosParameter parameter,
         string value)
     {

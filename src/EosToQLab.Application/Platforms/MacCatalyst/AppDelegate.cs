@@ -3,7 +3,7 @@ using Foundation;
 namespace EosToQLab.Application;
 
 [Register("AppDelegate")]
-internal class AppDelegate : MauiUIApplicationDelegate
+internal sealed class AppDelegate : MauiUIApplicationDelegate
 {
     protected override MauiApp CreateMauiApp()
     {

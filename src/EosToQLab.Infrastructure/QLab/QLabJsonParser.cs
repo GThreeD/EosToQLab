@@ -81,7 +81,7 @@ internal static class QLabJsonParser
         };
     }
 
-    private static void AddPatch(ICollection<QLabNetworkPatch> result, JsonElement item, string? fallbackId)
+    private static void AddPatch(List<QLabNetworkPatch> result, JsonElement item, string? fallbackId)
     {
         if (item.ValueKind != JsonValueKind.Object) return;
 

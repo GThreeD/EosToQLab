@@ -1,4 +1,4 @@
-name: macOS build
+name: test and macOS build
 
 on:
   workflow_dispatch:
@@ -7,7 +7,45 @@ on:
   pull_request:
 
 jobs:
-  test-and-publish:
+  test:
+    name: xUnit and 100% line coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+          cache: true
+          cache-dependency-path: tests/EosToQLab.Tests/EosToQLab.Tests.csproj
+      - name: Restore tests
+        run: dotnet restore tests/EosToQLab.Tests/EosToQLab.Tests.csproj
+      - name: Run xUnit tests and enforce coverage
+        run: |
+          dotnet test tests/EosToQLab.Tests/EosToQLab.Tests.csproj \
+            --configuration Release \
+            --no-restore \
+            --logger "trx;LogFileName=EosToQLab.Tests.trx" \
+            --results-directory artifacts/test-results \
+            -p:CollectCoverage=true \
+            -p:CoverletOutput="${{ github.workspace }}/artifacts/coverage/coverage.cobertura.xml" \
+            -p:CoverletOutputFormat=cobertura \
+            -p:Threshold=100 \
+            -p:ThresholdType=line \
+            -p:ThresholdStat=total \
+            '-p:Include=[EosToQLab.Core]*,[EosToQLab.Infrastructure]*'
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-and-coverage
+          path: |
+            artifacts/test-results
+            artifacts/coverage
+          if-no-files-found: warn
+
+  publish:
+    name: publish macOS ${{ matrix.architecture }}
+    needs: test
     runs-on: macos-15
     strategy:
       matrix:
@@ -19,10 +57,8 @@ jobs:
           dotnet-version: 10.0.302
       - name: Install MAUI workload
         run: dotnet workload install maui
-      - name: Restore
-        run: dotnet restore EosToQLab.slnx
-      - name: Run self-tests
-        run: dotnet run --project tests/EosToQLab.SelfTests/EosToQLab.SelfTests.csproj -c Release
+      - name: Restore application
+        run: dotnet restore src/EosToQLab.Application/EosToQLab.Application.csproj
       - name: Publish
         run: ./packaging/publish-macos.sh "${{ matrix.architecture }}"
       - uses: actions/upload-artifact@v4

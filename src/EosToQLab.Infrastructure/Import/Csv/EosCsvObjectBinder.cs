@@ -6,19 +6,19 @@ namespace EosToQLab.Infrastructure.Import.Csv;
 
 internal sealed class EosCsvObjectBinder<T> where T : new()
 {
-    private static readonly IReadOnlyList<PropertyBinding> Bindings = CreateBindings();
+    private static readonly List<PropertyBinding> Bindings = CreateBindings();
 
-    public IReadOnlyCollection<string> FindMissingRequiredColumns(
-        IReadOnlyDictionary<string, int> columns)
+    public static List<string> FindMissingRequiredColumns(
+        Dictionary<string, int> columns)
     {
         return Bindings
             .Where(binding => binding.Attribute.Required
                               && ResolveColumnName(binding.Attribute, columns) is null)
             .Select(binding => binding.Attribute.Name)
-            .ToArray();
+            .ToList();
     }
 
-    public T Bind(
+    public static T Bind(
         IReadOnlyList<string> row,
         IReadOnlyDictionary<string, int> columns,
         int rowNumber)
@@ -86,7 +86,7 @@ internal sealed class EosCsvObjectBinder<T> where T : new()
         return Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
     }
 
-    private static IReadOnlyList<PropertyBinding> CreateBindings()
+    private static List<PropertyBinding> CreateBindings()
     {
         var bindings = new List<PropertyBinding>();
         foreach (var property in typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public))

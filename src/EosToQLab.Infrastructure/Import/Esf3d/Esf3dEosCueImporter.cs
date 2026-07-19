@@ -73,7 +73,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
     {
         try
         {
-            using var archive = new ZipArchive(request.Content, ZipArchiveMode.Read, true);
+            await using var archive = new ZipArchive(request.Content, ZipArchiveMode.Read, true);
             var entry = archive.Entries
                 .Where(candidate => candidate.FullName.EndsWith("showdat.dat", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(candidate => candidate.FullName.Count(character => character == '/'))
@@ -81,7 +81,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
 
             if (entry is null) throw new ShowDataEntryMissingException(request.FileName);
 
-            await using var input = entry.Open();
+            await using var input = await entry.OpenAsync(cancellationToken);
             using var buffer = new MemoryStream(entry.Length > int.MaxValue ? 0 : (int)entry.Length);
             await input.CopyToAsync(buffer, cancellationToken);
             return (buffer.ToArray(), entry.FullName);
@@ -100,7 +100,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
         }
     }
 
-    private static IReadOnlyList<TextField> ExtractTextFields(byte[] data, int maxCharacters = 65_535)
+    private static List<TextField> ExtractTextFields(byte[] data, int maxCharacters = 65_535)
     {
         var candidates = new List<TextField>();
         for (var offset = 0; offset <= data.Length - 3; offset++)
@@ -142,10 +142,10 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
             intervals.Add((field.Offset, field.End));
         }
 
-        return accepted.OrderBy(field => field.Offset).ToArray();
+        return accepted.OrderBy(field => field.Offset).ToList();
     }
 
-    private static IReadOnlyList<RecoveredCue> ExtractCues(byte[] data, IReadOnlyList<TextField> fields)
+    private static List<RecoveredCue> ExtractCues(byte[] data, IReadOnlyList<TextField> fields)
     {
         var allCandidates = CueNumberCandidates(data);
         var run = SelectMainCueRun(allCandidates);
@@ -182,7 +182,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
                 && data[field.Offset - 1] == 0x02
                 && field.Offset != cueLabel?.Offset
                 && field.Offset != header.FollowTextOffset);
-            var cueNotes = header.CueNotesOffset is int cueNotesOffset
+            var cueNotes = header.CueNotesOffset is { } cueNotesOffset
                 ? recordFields.FirstOrDefault(field => field.Offset == cueNotesOffset)
                 : !header.Parsed
                     ? recordFields.FirstOrDefault(field =>
@@ -198,7 +198,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
             if (cueLabel is not null) excludedOffsets.Add(cueLabel.Offset);
             if (sceneLabel is not null) excludedOffsets.Add(sceneLabel.Offset);
             if (cueNotes is not null) excludedOffsets.Add(cueNotes.Offset);
-            if (header.FollowTextOffset is int followTextOffset) excludedOffsets.Add(followTextOffset);
+            if (header.FollowTextOffset is { } followTextOffset) excludedOffsets.Add(followTextOffset);
 
             recovered.Add(new RecoveredCue(
                 number.RawValue,
@@ -239,8 +239,7 @@ public sealed class Esf3dEosCueImporter : IEosCueImporter
     private static List<NumberCandidate> SelectMainCueRun(List<NumberCandidate> candidates)
     {
         return SplitMonotonicRuns(candidates)
-            .Where(run => run.Count >= 2
-                          && run[0].RawValue <= 100 * CueScale
+            .Where(run => run is [{ RawValue: <= 100 * CueScale }, _, ..]
                           && run.All(item => item.RawValue % 10 == 0))
             .OrderByDescending(run => run.Count)
             .ThenByDescending(run => run[^1].Offset - run[0].Offset)
