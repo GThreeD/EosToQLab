@@ -9,9 +9,21 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
+if ! command -v gh >/dev/null 2>&1; then
+  echo "GitHub CLI fehlt. Installation: brew install gh" >&2
+  exit 1
+fi
+
+version="${1:?Version erforderlich, zum Beispiel v1.0.0}"
+
+if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]; then
+  echo "Ungültige Version: $version" >&2
+  echo "Beispiel: v1.0.0 oder v1.0.0-beta.1" >&2
+  exit 1
+fi
+
 if [[ -n "$(git status --porcelain)" ]]; then
   echo "Das Git-Arbeitsverzeichnis enthält nicht commitete Änderungen." >&2
-  echo "Bitte zuerst committen oder stashen." >&2
   exit 1
 fi
 
@@ -19,21 +31,27 @@ echo "Verwende:"
 dotnet --version
 xcodebuild -version
 
-dotnet workload install maui --skip-manifest-update
+rm -rf "$root/dist"
+mkdir -p "$root/dist"
 
 ./packaging/publish-macos.sh arm64
 ./packaging/publish-macos.sh x64
 
-git add \
-  dist/EosToQLab-arm64.zip \
-  dist/EosToQLab-x64.zip
+arm64_zip="$root/dist/EosToQLab-arm64.zip"
+x64_zip="$root/dist/EosToQLab-x64.zip"
 
-if git diff --cached --quiet; then
-  echo "Keine Änderungen an den Build-Artefakten."
-  exit 0
-fi
+for file in "$arm64_zip" "$x64_zip"; do
+  if [[ ! -f "$file" ]]; then
+    echo "Release-Datei fehlt: $file" >&2
+    exit 1
+  fi
+done
 
-git commit -m "Update macOS builds [skip ci]"
-git push
+gh release create "$version" \
+  "$arm64_zip#EosToQLab für Apple Silicon" \
+  "$x64_zip#EosToQLab für Intel Macs" \
+  --title "EosToQLab $version" \
+  --generate-notes \
+  --target "$(git rev-parse HEAD)"
 
-echo "macOS-Builds wurden erstellt und gepusht."
+echo "Release $version wurde veröffentlicht."
