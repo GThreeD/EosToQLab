@@ -44,7 +44,7 @@ jobs:
   publish:
     name: publish macOS ${{ matrix.architecture }}
     needs: test
-    runs-on: macos-15
+    runs-on: macos-26
     strategy:
       matrix:
         architecture: [ arm64, x64 ]
@@ -53,12 +53,19 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.302
+      - name: Select Xcode 26.5 beta
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.5_beta_2.app/Contents/Developer
+          xcodebuild -version
       - name: Install MAUI workload
-        run: dotnet workload install maui
+        run: dotnet workload install maui --skip-manifest-update
       - name: Restore application
         run: dotnet restore src/EosToQLab.Application/EosToQLab.Application.csproj
       - name: Publish
-        run: ./packaging/publish-macos.sh "${{ matrix.architecture }}"
+        env:
+          DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: "true"
+        run: |
+          ./packaging/publish-macos.sh "${{ matrix.architecture }}"
       - uses: actions/upload-artifact@v4
         with:
           name: EosToQLab-${{ matrix.architecture }}
