@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "archives": [
+    {
+      "format": "{CB82CC14-5598-4DB1-A1D7-EBC3BE1D1038}",
+      "version": "3.3.5.69",
+      "fixture": "eos-3.3.5.69"
+    }
+  ]
+}

@@ -10,7 +10,7 @@ public sealed class ShowDataReadExceptionTests
         var inner = new InvalidOperationException("inner");
         var exception = new ShowDataReadException("show.esf3d", inner);
 
-        ExceptionAssertions.HasDetails(exception, "EOS_ESF3D_SHOWDAT_READ_FAILED", "show.esf3d");
+        ExceptionAssertions.HasDetails(exception, "EOS_SHOW_ARCHIVE_SHOWDAT_READ_FAILED", "show.esf3d");
         Assert.Same(inner, exception.InnerException);
     }
 }

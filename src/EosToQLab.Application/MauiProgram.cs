@@ -4,7 +4,7 @@ using EosToQLab.Core.QLab;
 using EosToQLab.Core.Security;
 using EosToQLab.Infrastructure.Import;
 using EosToQLab.Infrastructure.Import.Csv;
-using EosToQLab.Infrastructure.Import.Esf3d;
+using EosToQLab.Infrastructure.Import.EosShowArchive;
 using EosToQLab.Infrastructure.QLab;
 using EosToQLab.Infrastructure.QLab.Workflow;
 
@@ -24,8 +24,9 @@ public static class MauiProgram
         // Optional persistent implementation. Enable this registration only for a signed build
         // that is allowed to use the platform keychain, and remove the session registration above.
         // builder.Services.AddSingleton<IQLabPasscodeStore, MauiSecurePasscodeStore>();
+        builder.Services.AddSingleton<IEosShowArchiveCompatibility, EmbeddedEosShowArchiveCompatibility>();
         builder.Services.AddSingleton<IEosCueImporter, CsvEosCueImporter>();
-        builder.Services.AddSingleton<IEosCueImporter, Esf3dEosCueImporter>();
+        builder.Services.AddSingleton<IEosCueImporter, EosShowArchiveCueImporter>();
         builder.Services.AddSingleton<IEosCueImporterFactory, EosCueImporterFactory>();
         builder.Services.AddSingleton<IQLabImportPlanBuilder, QLabImportPlanBuilder>();
         builder.Services.AddSingleton<IQLabOscService, QLabOscService>();

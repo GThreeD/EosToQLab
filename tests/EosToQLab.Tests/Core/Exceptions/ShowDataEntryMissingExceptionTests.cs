@@ -9,6 +9,6 @@ public sealed class ShowDataEntryMissingExceptionTests
     {
         var exception = new ShowDataEntryMissingException("show.esf3d");
 
-        ExceptionAssertions.HasDetails(exception, "EOS_ESF3D_SHOWDAT_MISSING", "show.esf3d");
+        ExceptionAssertions.HasDetails(exception, "EOS_SHOW_ARCHIVE_SHOWDAT_MISSING", "show.esf3d");
     }
 }

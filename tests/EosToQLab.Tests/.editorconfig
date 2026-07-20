@@ -1,2 +1,3 @@
 [*.cs]
 resharper_inconsistent_naming_highlighting = none
+dotnet_diagnostic.CA1707.severity = none

@@ -3,8 +3,8 @@ namespace EosToQLab.Tests.Core.Models;
 public sealed class EosSourceKindTests
 {
     [Fact]
-    public void Defines_expected_values()
+    public void Defines_csv_and_show_archive_sources()
     {
-        Assert.NotEmpty(Enum.GetValues<EosSourceKind>());
+        Assert.Equal([EosSourceKind.Csv, EosSourceKind.ShowArchive], Enum.GetValues<EosSourceKind>());
     }
 }

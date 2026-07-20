@@ -1,0 +1,201 @@
+{
+  "purpose": "Regression contract for valid cue records whose layout does not always end with the canonical trailer.",
+  "strict": false,
+  "cues": [
+    {
+      "sourceOrder": 0,
+      "listNumber": 1,
+      "cueNumber": "1"
+    },
+    {
+      "sourceOrder": 1,
+      "listNumber": 1,
+      "cueNumber": "2"
+    },
+    {
+      "sourceOrder": 2,
+      "listNumber": 1,
+      "cueNumber": "3"
+    },
+    {
+      "sourceOrder": 3,
+      "listNumber": 1,
+      "cueNumber": "4"
+    },
+    {
+      "sourceOrder": 4,
+      "listNumber": 1,
+      "cueNumber": "10"
+    },
+    {
+      "sourceOrder": 5,
+      "listNumber": 1,
+      "cueNumber": "11"
+    },
+    {
+      "sourceOrder": 6,
+      "listNumber": 1,
+      "cueNumber": "12"
+    },
+    {
+      "sourceOrder": 7,
+      "listNumber": 1,
+      "cueNumber": "20"
+    },
+    {
+      "sourceOrder": 8,
+      "listNumber": 1,
+      "cueNumber": "21"
+    },
+    {
+      "sourceOrder": 9,
+      "listNumber": 1,
+      "cueNumber": "21.5"
+    },
+    {
+      "sourceOrder": 10,
+      "listNumber": 1,
+      "cueNumber": "22"
+    },
+    {
+      "sourceOrder": 11,
+      "listNumber": 1,
+      "cueNumber": "23"
+    },
+    {
+      "sourceOrder": 12,
+      "listNumber": 1,
+      "cueNumber": "30"
+    },
+    {
+      "sourceOrder": 13,
+      "listNumber": 1,
+      "cueNumber": "31"
+    },
+    {
+      "sourceOrder": 14,
+      "listNumber": 1,
+      "cueNumber": "32"
+    },
+    {
+      "sourceOrder": 15,
+      "listNumber": 1,
+      "cueNumber": "40"
+    },
+    {
+      "sourceOrder": 16,
+      "listNumber": 1,
+      "cueNumber": "40.1"
+    },
+    {
+      "sourceOrder": 17,
+      "listNumber": 1,
+      "cueNumber": "40.2"
+    },
+    {
+      "sourceOrder": 18,
+      "listNumber": 1,
+      "cueNumber": "41"
+    },
+    {
+      "sourceOrder": 19,
+      "listNumber": 1,
+      "cueNumber": "42"
+    },
+    {
+      "sourceOrder": 20,
+      "listNumber": 1,
+      "cueNumber": "43"
+    },
+    {
+      "sourceOrder": 21,
+      "listNumber": 1,
+      "cueNumber": "44"
+    },
+    {
+      "sourceOrder": 22,
+      "listNumber": 1,
+      "cueNumber": "45"
+    },
+    {
+      "sourceOrder": 23,
+      "listNumber": 1,
+      "cueNumber": "46"
+    },
+    {
+      "sourceOrder": 24,
+      "listNumber": 1,
+      "cueNumber": "80"
+    },
+    {
+      "sourceOrder": 25,
+      "listNumber": 1,
+      "cueNumber": "81"
+    },
+    {
+      "sourceOrder": 26,
+      "listNumber": 1,
+      "cueNumber": "82"
+    },
+    {
+      "sourceOrder": 27,
+      "listNumber": 1,
+      "cueNumber": "83"
+    },
+    {
+      "sourceOrder": 28,
+      "listNumber": 1,
+      "cueNumber": "83.1"
+    },
+    {
+      "sourceOrder": 29,
+      "listNumber": 1,
+      "cueNumber": "83.2"
+    },
+    {
+      "sourceOrder": 30,
+      "listNumber": 1,
+      "cueNumber": "83.3"
+    },
+    {
+      "sourceOrder": 31,
+      "listNumber": 1,
+      "cueNumber": "84"
+    },
+    {
+      "sourceOrder": 32,
+      "listNumber": 1,
+      "cueNumber": "85"
+    },
+    {
+      "sourceOrder": 33,
+      "listNumber": 1,
+      "cueNumber": "90"
+    },
+    {
+      "sourceOrder": 34,
+      "listNumber": 1,
+      "cueNumber": "91"
+    },
+    {
+      "sourceOrder": 35,
+      "listNumber": 1,
+      "cueNumber": "92"
+    },
+    {
+      "sourceOrder": 36,
+      "listNumber": 1,
+      "cueNumber": "93"
+    },
+    {
+      "sourceOrder": 37,
+      "listNumber": 1,
+      "cueNumber": "100"
+    },
+    {
+      "sourceOrder": 38,
+      "listNumber": 1,
+      "cueNumber": "101"
+    }
+  ]
+}

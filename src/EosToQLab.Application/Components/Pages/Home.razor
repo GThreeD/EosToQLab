@@ -11,7 +11,7 @@
     <div>
         <div class="eyebrow">Import workflow</div>
         <h1>Build a protected QLab cue list from EOS</h1>
-        <p>Choose an EOS CSV or ESF3D file, review and edit the parsed cues, and import them into a workspace that is
+        <p>Choose an EOS CSV, ESF2, or ESF3D file, review and edit the parsed cues, and import them into a workspace that is
             already open in QLab 5.</p>
     </div>
     <div class="status-pill @(_busy ? "working" : "ready")">
@@ -37,7 +37,7 @@
             <span class="step-number">1</span>
             <div>
                 <h2>EOS source</h2>
-                <p>CSV and ESF3D use separate import strategies behind the same interface.</p>
+                <p>CSV and EOS show archives use separate import strategies behind the same interface.</p>
             </div>
         </div>
 
@@ -45,7 +45,7 @@
             <InputFile OnChange="LoadSourceAsync" disabled="@_busy"/>
             <span class="drop-icon">⇩</span>
             <strong>Drop a file here or click to choose</strong>
-            <span>Accepted: .csv, .esf3d</span>
+            <span>Accepted: .csv, .esf2, .esf3d</span>
         </label>
 
         @if (_source is not null)

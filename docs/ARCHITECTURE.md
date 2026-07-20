@@ -6,7 +6,7 @@ The application uses a deliberately small architecture:
 
 - source formats are replaceable import strategies;
 - source parsers do not know about QLab;
-- QLab does not know whether a cue came from CSV or ESF3D;
+- QLab does not know whether a cue came from CSV or an EOS show archive;
 - the Blazor UI coordinates services but contains no parsing or OSC protocol logic.
 
 ## Projects
@@ -16,7 +16,7 @@ The application uses a deliberately small architecture:
 Contains stable application concepts:
 
 - `EosCue` and result models;
-- `IEosCueImporter` and `IEosCueImporterFactory`;
+- `IEosCueImporter`, `IEosCueImporterFactory`, and the storage-agnostic `IEosShowArchiveCompatibility`;
 - `IQLabService` as the application-facing facade;
 - `IQLabImportPlanBuilder`;
 - diagnostic and exception types.
@@ -28,7 +28,8 @@ It has no MAUI, archive, reflection-mapping, TCP, or JSON dependencies beyond th
 Contains implementation details:
 
 - `CsvEosCueImporter`;
-- `Esf3dEosCueImporter` plus `Esf3dCueHeaderDecoder` for cue notes and Follow/Hang metadata;
+- `EosShowArchiveCueImporter` plus `EosShowArchiveCueHeaderDecoder` for cue notes and Follow/Hang metadata;
+- `EmbeddedEosShowArchiveCompatibility`, which reads only the build-generated tested-archive resource;
 - `EosCueImporterFactory`;
 - OSC encoding/decoding;
 - double-END SLIP framing for QLab TCP;
@@ -38,6 +39,13 @@ Contains implementation details:
 - `IQLabOscService`/`QLabOscService` and connection-bound `IQLabOscSession`/`QLabOscSession` for direct OSC
   communication;
 - centralized protocol names in `QLabProtocol`.
+
+
+### EosToQLab.CompatibilityCatalogGenerator
+
+A build-only console tool scans explicit compatibility fixtures, verifies each archive's `version.json` against its
+`expected.json`, and writes a deterministic JSON catalog into the Infrastructure intermediate output. The tool has no
+reference to Core, Infrastructure, or the test assembly. Regression fixture directories are never scanned.
 
 ### EosToQLab.Application
 
@@ -58,7 +66,7 @@ select source with native file picker
 ```text
 IEosCueImporterFactory
     ├── CsvEosCueImporter
-    └── Esf3dEosCueImporter
+    └── EosShowArchiveCueImporter
 ```
 
 Adding another EOS source format requires:
@@ -72,7 +80,7 @@ Adding another EOS source format requires:
 CSV parsing uses `EosCsvCue` as a source model because its shape follows an external format. Attributes identify the
 column for each property. The binder is generic and metadata is cached per type.
 
-After parsing and cue-part aggregation, source rows are mapped into `EosCue`. ESF3D recovery also maps directly into
+After parsing and cue-part aggregation, source rows are mapped into `EosCue`. EOS show archive recovery also maps directly into
 `EosCue`. Everything after that point uses only the common model.
 
 ## QLab import planning
@@ -127,6 +135,7 @@ No AppleScript or UI scripting is used.
 planner, transport, and workflow tests independent from the MAUI workload. Pure preview state and passcode-cache
 behavior live in Core so they remain directly unit-testable.
 
-A convention test requires one dedicated test class and source file per production type. ESF3D compatibility is
-maintained through deterministic synthetic fixtures and immutable, versioned golden-master exports; no CI job launches
-Eos.
+A convention test requires one dedicated test class and source file per production type. EOS show archive compatibility
+is maintained through explicit compatibility fixtures and immutable golden-master contracts; no CI job launches Eos. A
+deterministic build tool derives the embedded runtime compatibility catalog from those fixtures, while regression
+fixtures remain excluded from the advertised catalog.

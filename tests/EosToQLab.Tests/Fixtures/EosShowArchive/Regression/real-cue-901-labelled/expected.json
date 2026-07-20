@@ -1,0 +1,59 @@
+{
+  "archive": {
+    "format": "{CB82CC14-5598-4DB1-A1D7-EBC3BE1D1038}",
+    "version": "3.3.5.69"
+  },
+  "purpose": "A real labelled cue 901 must be imported once while the effect/reference records are ignored.",
+  "cues": [
+    {
+      "sourceOrder": 0,
+      "listNumber": 1,
+      "cueNumber": "1",
+      "label": "Blackout",
+      "notes": "Network note",
+      "scene": "Scene A",
+      "follow": "F3"
+    },
+    {
+      "sourceOrder": 1,
+      "listNumber": 1,
+      "cueNumber": "2",
+      "follow": "H1.5"
+    },
+    {
+      "sourceOrder": 2,
+      "listNumber": 1,
+      "cueNumber": "3"
+    },
+    {
+      "sourceOrder": 3,
+      "listNumber": 1,
+      "cueNumber": "4",
+      "follow": "F1"
+    },
+    {
+      "sourceOrder": 4,
+      "listNumber": 1,
+      "cueNumber": "5",
+      "label": "Only Label"
+    },
+    {
+      "sourceOrder": 5,
+      "listNumber": 1,
+      "cueNumber": "6",
+      "notes": "Only Notes"
+    },
+    {
+      "sourceOrder": 6,
+      "listNumber": 1,
+      "cueNumber": "7",
+      "scene": "Only Scene"
+    },
+    {
+      "sourceOrder": 7,
+      "listNumber": 1,
+      "cueNumber": "901",
+      "label": "With Label"
+    }
+  ]
+}

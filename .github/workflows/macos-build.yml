@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: xUnit and 100% line coverage
+    name: xUnit, fixture catalog, and 100% line coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +19,7 @@ jobs:
           cache-dependency-path: tests/EosToQLab.Tests/EosToQLab.Tests.csproj
       - name: Restore tests
         run: dotnet restore tests/EosToQLab.Tests/EosToQLab.Tests.csproj
-      - name: Run xUnit tests and enforce coverage
+      - name: Generate fixture catalog, run xUnit tests, and enforce coverage
         run: |
           dotnet test tests/EosToQLab.Tests/EosToQLab.Tests.csproj \
             --configuration Release \
@@ -41,6 +41,7 @@ jobs:
           path: |
             artifacts/test-results
             artifacts/coverage
+            src/EosToQLab.Infrastructure/obj/Release/**/eos-show-archive-tested-archives.json
           if-no-files-found: warn
 
   publish:

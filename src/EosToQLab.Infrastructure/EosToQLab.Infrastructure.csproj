@@ -2,8 +2,26 @@
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <RootNamespace>EosToQLab.Infrastructure</RootNamespace>
+        <EosShowArchiveCompatibilityFixtureRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../tests/EosToQLab.Tests/Fixtures/EosShowArchive/Compatibility'))</EosShowArchiveCompatibilityFixtureRoot>
+        <EosShowArchiveCompatibilityCatalog>$(IntermediateOutputPath)eos-show-archive-tested-archives.json</EosShowArchiveCompatibilityCatalog>
+        <EosShowArchiveCompatibilityGenerator>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../tools/EosToQLab.CompatibilityCatalogGenerator/bin/$(Configuration)/net10.0/EosToQLab.CompatibilityCatalogGenerator.dll'))</EosShowArchiveCompatibilityGenerator>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../EosToQLab.Core/EosToQLab.Core.csproj"/>
+        <ProjectReference Include="../../tools/EosToQLab.CompatibilityCatalogGenerator/EosToQLab.CompatibilityCatalogGenerator.csproj"
+                          ReferenceOutputAssembly="false" />
+        <_EosShowArchiveCompatibilityFixture Include="$(EosShowArchiveCompatibilityFixtureRoot)/**/*" />
+        <EmbeddedResource Include="$(EosShowArchiveCompatibilityCatalog)"
+                          Condition="'$(DesignTimeBuild)' != 'true'"
+                          LogicalName="EosToQLab.Infrastructure.Import.EosShowArchive.tested-archives.json" />
     </ItemGroup>
+    <Target Name="GenerateEosShowArchiveCompatibilityCatalog"
+            BeforeTargets="PrepareResourceNames"
+            DependsOnTargets="ResolveProjectReferences"
+            Inputs="@(_EosShowArchiveCompatibilityFixture);$(EosShowArchiveCompatibilityGenerator)"
+            Outputs="$(EosShowArchiveCompatibilityCatalog)"
+            Condition="'$(DesignTimeBuild)' != 'true'">
+        <MakeDir Directories="$(IntermediateOutputPath)" />
+        <Exec Command="dotnet &quot;$(EosShowArchiveCompatibilityGenerator)&quot; &quot;$(EosShowArchiveCompatibilityFixtureRoot)&quot; &quot;$(EosShowArchiveCompatibilityCatalog)&quot;" />
+    </Target>
 </Project>

@@ -8,7 +8,7 @@ global using EosToQLab.Core.QLab;
 global using EosToQLab.Core.Security;
 global using EosToQLab.Infrastructure.Import;
 global using EosToQLab.Infrastructure.Import.Csv;
-global using EosToQLab.Infrastructure.Import.Esf3d;
+global using EosToQLab.Infrastructure.Import.EosShowArchive;
 global using EosToQLab.Infrastructure.QLab;
 global using EosToQLab.Infrastructure.QLab.Osc;
 global using EosToQLab.Infrastructure.QLab.Workflow;
