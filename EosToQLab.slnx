@@ -7,6 +7,10 @@
         <File Path="docs\TESTING.md"/>
     </Folder>
     <Folder Name="/SolutionItems/"/>
+    <Folder Name="/SolutionItems/packaging/">
+        <File Path="packaging\build-and-push-macos.sh"/>
+        <File Path="packaging\publish-macos.sh"/>
+    </Folder>
     <Folder Name="/SolutionItems/workflows/">
         <File Path=".github\workflows\macos-build.yml"/>
     </Folder>
