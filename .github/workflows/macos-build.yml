@@ -1,11 +1,24 @@
-name: test and macOS build
+name: tests, coverage, and macOS publish
 
 on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    name: xUnit, fixture catalog, and 100% line coverage
+    name: Required - tests and coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,7 +29,7 @@ jobs:
           cache-dependency-path: tests/EosToQLab.Tests/EosToQLab.Tests.csproj
       - name: Restore tests
         run: dotnet restore tests/EosToQLab.Tests/EosToQLab.Tests.csproj
-      - name: Generate fixture catalog, run xUnit tests, and enforce coverage
+      - name: Run tests and enforce 90% line coverage
         run: |
           dotnet test tests/EosToQLab.Tests/EosToQLab.Tests.csproj \
             --configuration Release \
@@ -40,6 +53,7 @@ jobs:
 
   publish:
     name: publish macOS ${{ matrix.architecture }}
+    if: github.event_name == 'workflow_dispatch'
     needs: test
     runs-on: macos-26
     strategy:
