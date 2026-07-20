@@ -1,0 +1,5 @@
+# Every change in this repository requires review by the repository owner.
+* @GThreeD
+
+# Keep the ownership rule itself under the same ownership requirement.
+/.github/CODEOWNERS @GThreeD
