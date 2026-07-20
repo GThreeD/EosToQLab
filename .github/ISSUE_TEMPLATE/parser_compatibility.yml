@@ -1,0 +1,101 @@
+name: EOS archive parser problem
+description: Report missing, incorrect, or false-positive cues from an ESF2 or ESF3D archive.
+title: "[Parser]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for `.esf2` and `.esf3d` import problems.
+
+        **Issue attachments are public.** Do not upload an original production show file unless it contains no confidential information. Prefer a minimal artificial or fully sanitized reproduction archive.
+
+  - type: dropdown
+    id: archive-type
+    attributes:
+      label: Archive type
+      options:
+        - ESF2
+        - ESF3D
+    validations:
+      required: true
+
+  - type: input
+    id: eos-version
+    attributes:
+      label: EOS version
+      description: Use the version displayed by EOS or the `Version` value from `version.json`.
+      placeholder: 3.3.5.69
+    validations:
+      required: true
+
+  - type: input
+    id: archive-format
+    attributes:
+      label: Format value from version.json
+      placeholder: "{CB82CC14-5598-4DB1-A1D7-EBC3BE1D1038}"
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: EosToQLab version or commit
+      placeholder: Release tag or commit SHA
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-cues
+    attributes:
+      label: Expected result
+      description: List the expected cue numbers and any relevant labels, notes, scene text, Follow, or Hang values.
+      placeholder: |
+        Expected 39 cues.
+        Cue 42: label ...
+        Cue 43: H1.5
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-cues
+    attributes:
+      label: Actual result
+      description: List missing, extra, or incorrectly decoded cues.
+      placeholder: |
+        Cues 42 through 46 are missing.
+        Cue 901 appears as a false positive.
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Import diagnostics
+      description: Include warning codes and messages shown by the app.
+      render: text
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction archive
+      description: Explain whether you can provide a minimal sanitized archive and how it was created. Drag the file into this field only when it is safe to publish.
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional parser details
+      description: Include whether cue parts, fractional numbers, Follow/Hang, labels, or scenes are involved.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I verified the problem with the latest `main` branch or latest release.
+          required: true
+        - label: I searched existing parser issues for the same EOS version and symptom.
+          required: true
+        - label: Any attached archive is artificial or fully sanitized and safe to publish.
+          required: true
+        - label: I removed credentials, network details, personal information, and production-sensitive content.
+          required: true

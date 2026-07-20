@@ -1,0 +1,98 @@
+name: Bug report
+description: Report a reproducible problem that is not specific to ESF2 or ESF3D parsing.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a problem. For EOS show-archive parsing issues, use the dedicated parser compatibility form instead.
+
+        Do not include QLab passcodes, credentials, confidential show data, or private production information.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem summary
+      description: What went wrong?
+      placeholder: Describe the problem in one or two clear paragraphs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide the smallest reliable sequence of steps.
+      placeholder: |
+        1. Start EosToQLab
+        2. Select ...
+        3. Click ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: What happened instead?
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: EosToQLab version or commit
+      placeholder: Release tag or commit SHA
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and architecture
+      placeholder: macOS 15.x, Apple Silicon or Intel
+    validations:
+      required: true
+
+  - type: input
+    id: qlab
+    attributes:
+      label: QLab version
+      description: Enter "not applicable" when QLab is unrelated to the problem.
+      placeholder: QLab 5.x or not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or diagnostics
+      description: Paste only the relevant portion. Remove credentials and private data first.
+      render: shell
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Screenshots, regression range, or other useful information.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for duplicates.
+          required: true
+        - label: I removed passcodes, credentials, and confidential show information.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
