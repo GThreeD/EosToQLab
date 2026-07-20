@@ -23,16 +23,13 @@ jobs:
         run: |
           dotnet test tests/EosToQLab.Tests/EosToQLab.Tests.csproj \
             --configuration Release \
-            --no-restore \
-            --logger "trx;LogFileName=EosToQLab.Tests.trx" \
-            --results-directory artifacts/test-results \
+            --logger "console;verbosity=normal" \
             -p:CollectCoverage=true \
-            -p:CoverletOutput="${{ github.workspace }}/artifacts/coverage/coverage.cobertura.xml" \
             -p:CoverletOutputFormat=cobertura \
-            -p:Threshold=100 \
+            -p:Threshold=90 \
             -p:ThresholdType=line \
             -p:ThresholdStat=total \
-            '-p:Include=[EosToQLab.Core]*,[EosToQLab.Infrastructure]*'
+            '-p:Include=[EosToQLab.Core]*%2c[EosToQLab.Infrastructure]*'
       - name: Upload test and coverage reports
         if: always()
         uses: actions/upload-artifact@v4

@@ -6,6 +6,7 @@
         <IsTestProject>true</IsTestProject>
         <RootNamespace>EosToQLab.Tests</RootNamespace>
     </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
         <PackageReference Include="xunit.v3" Version="3.2.2"/>
@@ -18,23 +19,18 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
     </ItemGroup>
+
     <ItemGroup>
         <ProjectReference Include="../../src/EosToQLab.Core/EosToQLab.Core.csproj"/>
         <ProjectReference Include="../../src/EosToQLab.Infrastructure/EosToQLab.Infrastructure.csproj"/>
     </ItemGroup>
+
     <ItemGroup>
-        <None Include="../../samples/reference-eos.csv" Link="Fixtures/Csv/reference-eos.csv" CopyToOutputDirectory="PreserveNewest"/>
-        <None Update="Fixtures/EosShowArchive/**/*.esf3d" CopyToOutputDirectory="PreserveNewest"/>
-        <None Update="Fixtures/EosShowArchive/**/*.esf2" CopyToOutputDirectory="PreserveNewest"/>
-        <None Update="Fixtures/EosShowArchive/**/*.json" CopyToOutputDirectory="PreserveNewest"/>
-        <None Update="Fixtures/EosShowArchive/**/*.md" CopyToOutputDirectory="PreserveNewest"/>
-        <None Update="Fixtures\Esf3d\expected.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="Fixtures\EosShowArchive\Regression\dense-cue-records\expected.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="Fixtures\EosShowArchive\Compatibility\test\expected.json">
+        <None Include="../../samples/reference-eos.csv"
+              Link="Fixtures/Csv/reference-eos.csv"
+              CopyToOutputDirectory="PreserveNewest"/>
+
+        <None Update="Fixtures/**/*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>

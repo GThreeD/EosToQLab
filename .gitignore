@@ -9,4 +9,6 @@ dist/
 *.suo
 
 artifacts/
-TestResults/
+**/coverage.cobertura.xml
+**/TestResults/
+*.trx
