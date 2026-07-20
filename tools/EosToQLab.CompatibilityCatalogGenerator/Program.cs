@@ -2,18 +2,14 @@ using System.IO.Compression;
 using System.Text.Json;
 
 if (args.Length != 2)
-{
     throw new ArgumentException(
         "Usage: EosToQLab.CompatibilityCatalogGenerator <compatibility-fixture-root> <output-json>");
-}
 
 var fixtureRoot = Path.GetFullPath(args[0]);
 var outputPath = Path.GetFullPath(args[1]);
 if (!Directory.Exists(fixtureRoot))
-{
     throw new DirectoryNotFoundException(
         $"EOS show archive compatibility fixture root was not found: {fixtureRoot}");
-}
 
 var fixtureDirectories = Directory.EnumerateFiles(fixtureRoot, "*", SearchOption.AllDirectories)
     .Where(path => IsShowArchiveExtension(Path.GetExtension(path))
@@ -23,10 +19,8 @@ var fixtureDirectories = Directory.EnumerateFiles(fixtureRoot, "*", SearchOption
     .OrderBy(path => path, StringComparer.Ordinal)
     .ToArray();
 if (fixtureDirectories.Length == 0)
-{
     throw new InvalidDataException(
         $"No EOS show archive compatibility fixtures were found in '{fixtureRoot}'.");
-}
 
 var entries = new List<(string Format, string Version, string Fixture)>();
 foreach (var fixtureDirectory in fixtureDirectories)
@@ -41,20 +35,16 @@ foreach (var fixtureDirectory in fixtureDirectories)
         .OrderBy(path => path, StringComparer.Ordinal)
         .ToArray();
     if (contracts.Length != 1 || archives.Length != 1)
-    {
         throw new InvalidDataException(
             $"Compatibility fixture '{fixtureName}' must contain exactly one .esf2 or .esf3d archive and one expected.json contract.");
-    }
 
     var expectedIdentity = ReadExpectedIdentity(contracts[0], fixtureName);
     var archiveIdentity = ReadArchiveIdentity(archives[0], fixtureName);
     if (!IdentityEquals(expectedIdentity, archiveIdentity))
-    {
         throw new InvalidDataException(
             $"Compatibility fixture '{fixtureName}' declares " +
             $"'{expectedIdentity.Format}'/'{expectedIdentity.Version}' in expected.json, " +
             $"but version.json contains '{archiveIdentity.Format}'/'{archiveIdentity.Version}'.");
-    }
 
     entries.Add((
         archiveIdentity.Format,
@@ -68,11 +58,9 @@ var duplicate = entries
         StringComparer.OrdinalIgnoreCase)
     .FirstOrDefault(group => group.Count() > 1);
 if (duplicate is not null)
-{
     throw new InvalidDataException(
-        $"More than one compatibility fixture covers the same EOS archive identity: " +
+        "More than one compatibility fixture covers the same EOS archive identity: " +
         string.Join(", ", duplicate.Select(entry => entry.Fixture)));
-}
 
 var catalog = new
 {
@@ -109,10 +97,8 @@ static (string Format, string Version) ReadExpectedIdentity(string expectedPath,
     if (root.ValueKind != JsonValueKind.Object
         || !root.TryGetProperty("archive", out var archive)
         || archive.ValueKind != JsonValueKind.Object)
-    {
         throw new InvalidDataException(
             $"Compatibility fixture '{fixtureName}' must declare archive.format and archive.version in expected.json.");
-    }
 
     return ReadIdentity(archive, "format", "version", $"expected.json of '{fixtureName}'");
 }
@@ -121,18 +107,18 @@ static (string Format, string Version) ReadArchiveIdentity(string archivePath, s
 {
     using var archive = ZipFile.OpenRead(archivePath);
     _ = archive.Entries
-        .Where(entry => entry.FullName.EndsWith("showdat.dat", StringComparison.OrdinalIgnoreCase))
-        .OrderBy(entry => entry.FullName.Count(character => character == '/'))
-        .FirstOrDefault()
+            .Where(entry => entry.FullName.EndsWith("showdat.dat", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(entry => entry.FullName.Count(character => character == '/'))
+            .FirstOrDefault()
         ?? throw new InvalidDataException(
             $"Compatibility fixture '{fixtureName}' has no showdat.dat payload.");
 
     var manifest = archive.Entries
-        .Where(entry => entry.FullName.EndsWith("version.json", StringComparison.OrdinalIgnoreCase))
-        .OrderBy(entry => entry.FullName.Count(character => character == '/'))
-        .FirstOrDefault()
-        ?? throw new InvalidDataException(
-            $"Compatibility fixture '{fixtureName}' has no version.json manifest.");
+                       .Where(entry => entry.FullName.EndsWith("version.json", StringComparison.OrdinalIgnoreCase))
+                       .OrderBy(entry => entry.FullName.Count(character => character == '/'))
+                       .FirstOrDefault()
+                   ?? throw new InvalidDataException(
+                       $"Compatibility fixture '{fixtureName}' has no version.json manifest.");
 
     using var stream = manifest.Open();
     using var document = JsonDocument.Parse(stream);
@@ -150,16 +136,12 @@ static (string Format, string Version) ReadIdentity(
         || formatProperty.ValueKind != JsonValueKind.String
         || !element.TryGetProperty(versionPropertyName, out var versionProperty)
         || versionProperty.ValueKind != JsonValueKind.String)
-    {
         throw new InvalidDataException($"{source} has no readable format/version identity.");
-    }
 
     var format = formatProperty.GetString()?.Trim();
     var version = versionProperty.GetString()?.Trim();
     if (string.IsNullOrWhiteSpace(format) || string.IsNullOrWhiteSpace(version))
-    {
         throw new InvalidDataException($"{source} has an empty format/version identity.");
-    }
 
     return (format, version);
 }

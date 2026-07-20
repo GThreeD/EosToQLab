@@ -36,7 +36,8 @@ public sealed class EosShowArchiveCompatibilityTests
             if (versionEntry is null) continue;
 
             await using var input = await versionEntry.OpenAsync(TestContext.Current.CancellationToken);
-            using var document = await JsonDocument.ParseAsync(input, cancellationToken: TestContext.Current.CancellationToken);
+            using var document =
+                await JsonDocument.ParseAsync(input, cancellationToken: TestContext.Current.CancellationToken);
             manifests.Add((
                 document.RootElement.GetProperty("Format").GetString()!,
                 document.RootElement.GetProperty("Version").GetString()!));
@@ -50,6 +51,7 @@ public sealed class EosShowArchiveCompatibilityTests
         Assert.All(manifests, manifest =>
             Assert.True(EosShowArchiveCompatibility.IsTested(manifest.Format, manifest.Version)));
     }
+
     private static bool IsShowArchiveExtension(string extension)
     {
         return string.Equals(extension, ".esf2", StringComparison.OrdinalIgnoreCase)

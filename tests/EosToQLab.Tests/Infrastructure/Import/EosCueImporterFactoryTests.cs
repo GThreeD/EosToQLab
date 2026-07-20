@@ -7,7 +7,8 @@ public sealed class EosCueImporterFactoryTests
     [Fact]
     public void Selects_first_matching_importer()
     {
-        var first = new FakeEosCueImporter(EosSourceKind.Csv, name => name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase));
+        var first = new FakeEosCueImporter(EosSourceKind.Csv,
+            name => name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase));
         var second = new FakeEosCueImporter(EosSourceKind.ShowArchive, _ => true);
         var factory = new EosCueImporterFactory([first, second]);
 
@@ -17,6 +18,8 @@ public sealed class EosCueImporterFactoryTests
     }
 
     [Fact]
-    public void Throws_for_unsupported_file() =>
+    public void Throws_for_unsupported_file()
+    {
         Assert.Throws<UnsupportedEosImportFormatException>(() => new EosCueImporterFactory([]).CreateFor("show.txt"));
+    }
 }

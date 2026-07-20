@@ -9,5 +9,8 @@ internal sealed class FakeEosShowArchiveCompatibility : IEosShowArchiveCompatibi
         _isCovered = isCovered ?? ((_, _) => true);
     }
 
-    public bool IsCovered(string? format, string? version) => _isCovered(format, version);
+    public bool IsCovered(string? format, string? version)
+    {
+        return _isCovered(format, version);
+    }
 }

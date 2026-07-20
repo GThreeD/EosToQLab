@@ -9,11 +9,11 @@
     <ItemGroup>
         <ProjectReference Include="../EosToQLab.Core/EosToQLab.Core.csproj"/>
         <ProjectReference Include="../../tools/EosToQLab.CompatibilityCatalogGenerator/EosToQLab.CompatibilityCatalogGenerator.csproj"
-                          ReferenceOutputAssembly="false" />
-        <_EosShowArchiveCompatibilityFixture Include="$(EosShowArchiveCompatibilityFixtureRoot)/**/*" />
+                          ReferenceOutputAssembly="false"/>
+        <_EosShowArchiveCompatibilityFixture Include="$(EosShowArchiveCompatibilityFixtureRoot)/**/*"/>
         <EmbeddedResource Include="$(EosShowArchiveCompatibilityCatalog)"
                           Condition="'$(DesignTimeBuild)' != 'true'"
-                          LogicalName="EosToQLab.Infrastructure.Import.EosShowArchive.tested-archives.json" />
+                          LogicalName="EosToQLab.Infrastructure.Import.EosShowArchive.tested-archives.json"/>
     </ItemGroup>
     <Target Name="GenerateEosShowArchiveCompatibilityCatalog"
             BeforeTargets="PrepareResourceNames"
@@ -21,7 +21,7 @@
             Inputs="@(_EosShowArchiveCompatibilityFixture);$(EosShowArchiveCompatibilityGenerator)"
             Outputs="$(EosShowArchiveCompatibilityCatalog)"
             Condition="'$(DesignTimeBuild)' != 'true'">
-        <MakeDir Directories="$(IntermediateOutputPath)" />
-        <Exec Command="dotnet &quot;$(EosShowArchiveCompatibilityGenerator)&quot; &quot;$(EosShowArchiveCompatibilityFixtureRoot)&quot; &quot;$(EosShowArchiveCompatibilityCatalog)&quot;" />
+        <MakeDir Directories="$(IntermediateOutputPath)"/>
+        <Exec Command="dotnet &quot;$(EosShowArchiveCompatibilityGenerator)&quot; &quot;$(EosShowArchiveCompatibilityFixtureRoot)&quot; &quot;$(EosShowArchiveCompatibilityCatalog)&quot;"/>
     </Target>
 </Project>

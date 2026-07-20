@@ -35,10 +35,8 @@ public sealed class EmbeddedEosShowArchiveCompatibility : IEosShowArchiveCompati
                 || schemaVersion.GetInt32() != 1
                 || !root.TryGetProperty("archives", out var archives)
                 || archives.ValueKind != JsonValueKind.Array)
-            {
                 throw new InvalidDataException(
                     "The embedded EOS show archive compatibility catalog has an unsupported schema.");
-            }
 
             _coveredArchives = archives
                 .EnumerateArray()
@@ -70,18 +68,14 @@ public sealed class EmbeddedEosShowArchiveCompatibility : IEosShowArchiveCompati
             || formatProperty.ValueKind != JsonValueKind.String
             || !element.TryGetProperty("version", out var versionProperty)
             || versionProperty.ValueKind != JsonValueKind.String)
-        {
             throw new InvalidDataException(
                 "The embedded EOS show archive compatibility catalog contains an invalid archive entry.");
-        }
 
         var format = formatProperty.GetString()?.Trim();
         var version = versionProperty.GetString()?.Trim();
         if (string.IsNullOrWhiteSpace(format) || string.IsNullOrWhiteSpace(version))
-        {
             throw new InvalidDataException(
                 "The embedded EOS show archive compatibility catalog contains an empty format or version.");
-        }
 
         return new ArchiveIdentity(format, version);
     }
@@ -95,10 +89,10 @@ public sealed class EmbeddedEosShowArchiveCompatibility : IEosShowArchiveCompati
         public bool Equals(ArchiveIdentity? x, ArchiveIdentity? y)
         {
             return ReferenceEquals(x, y)
-                   || x is not null
-                   && y is not null
-                   && StringComparer.OrdinalIgnoreCase.Equals(x.Format, y.Format)
-                   && StringComparer.OrdinalIgnoreCase.Equals(x.Version, y.Version);
+                   || (x is not null
+                       && y is not null
+                       && StringComparer.OrdinalIgnoreCase.Equals(x.Format, y.Format)
+                       && StringComparer.OrdinalIgnoreCase.Equals(x.Version, y.Version));
         }
 
         public int GetHashCode(ArchiveIdentity obj)

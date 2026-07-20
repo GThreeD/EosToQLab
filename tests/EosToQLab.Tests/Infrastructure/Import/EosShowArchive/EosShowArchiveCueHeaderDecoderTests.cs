@@ -25,8 +25,16 @@ public sealed class EosShowArchiveCueHeaderDecoderTests
     {
         Assert.Equal("F1.5", Decode(EosShowArchiveHeaderFixtureBuilder.Unsigned(1500)).Follow);
         Assert.Equal("H", Decode(EosShowArchiveHeaderFixtureBuilder.Boolean(true)).Follow);
-        Assert.Equal("H1.5", Decode([0x02, .. EosShowArchiveHeaderFixtureBuilder.Boolean(true), .. EosShowArchiveHeaderFixtureBuilder.Unsigned(1500), 0x04]).Follow);
-        Assert.Equal("F1.5", Decode([0x02, .. EosShowArchiveHeaderFixtureBuilder.Unsigned(0), .. EosShowArchiveHeaderFixtureBuilder.Unsigned(1500), 0x04]).Follow);
+        Assert.Equal("H1.5",
+            Decode([
+                0x02, .. EosShowArchiveHeaderFixtureBuilder.Boolean(true),
+                .. EosShowArchiveHeaderFixtureBuilder.Unsigned(1500), 0x04
+            ]).Follow);
+        Assert.Equal("F1.5",
+            Decode([
+                0x02, .. EosShowArchiveHeaderFixtureBuilder.Unsigned(0),
+                .. EosShowArchiveHeaderFixtureBuilder.Unsigned(1500), 0x04
+            ]).Follow);
     }
 
     [Fact]

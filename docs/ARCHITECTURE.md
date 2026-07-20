@@ -40,7 +40,6 @@ Contains implementation details:
   communication;
 - centralized protocol names in `QLabProtocol`.
 
-
 ### EosToQLab.CompatibilityCatalogGenerator
 
 A build-only console tool scans explicit compatibility fixtures, verifies each archive's `version.json` against its
@@ -80,7 +79,8 @@ Adding another EOS source format requires:
 CSV parsing uses `EosCsvCue` as a source model because its shape follows an external format. Attributes identify the
 column for each property. The binder is generic and metadata is cached per type.
 
-After parsing and cue-part aggregation, source rows are mapped into `EosCue`. EOS show archive recovery also maps directly into
+After parsing and cue-part aggregation, source rows are mapped into `EosCue`. EOS show archive recovery also maps
+directly into
 `EosCue`. Everything after that point uses only the common model.
 
 ## QLab import planning

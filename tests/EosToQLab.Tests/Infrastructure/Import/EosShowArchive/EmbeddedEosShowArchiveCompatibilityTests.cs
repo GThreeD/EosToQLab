@@ -117,5 +117,8 @@ public sealed class EmbeddedEosShowArchiveCompatibilityTests
             new EmbeddedEosShowArchiveCompatibility((Stream)null!));
     }
 
-    private static MemoryStream Catalog(string json) => new(Encoding.UTF8.GetBytes(json));
+    private static MemoryStream Catalog(string json)
+    {
+        return new MemoryStream(Encoding.UTF8.GetBytes(json));
+    }
 }
